@@ -1,75 +1,87 @@
-# React + TypeScript + Vite
+# Reproductor de Música
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación de React y TypeScript que administra una lista doblemente enlazada, reproduce archivos de audio y permite buscar videos musicales en YouTube.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js y npm.
+- Una clave de Google Cloud con **YouTube Data API v3** habilitada para usar la búsqueda.
 
-## React Compiler
+## Instalación y configuración
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Instala las dependencias:
 
-## Expanding the ESLint configuration
+   ```powershell
+   npm install
+   ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+2. En [Google Cloud Console](https://console.cloud.google.com/), crea un proyecto, habilita **YouTube Data API v3** y crea una API key.
+3. Restringe la clave en Google Cloud:
+   - Restricción de API: permite únicamente YouTube Data API v3.
+   - Restricción de sitio web (HTTP referrers): autoriza el origen que uses, por ejemplo `http://localhost:5173/*` y `http://127.0.0.1:5173/*`.
+4. Crea `.env.local` desde la plantilla:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+   ```powershell
+   Copy-Item .env.example .env.local
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+5. Edita `.env.local` y pega tu clave sin comillas:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+   ```env
+   VITE_YOUTUBE_API_KEY=tu_clave_de_google_cloud
+   ```
 
+6. Inicia el servidor:
+
+   ```powershell
+   npm run dev
+   ```
+
+Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve a iniciar `npm run dev`.
+
+## Uso
+
+- **Audio local/directo:** completa título, artista, duración y URL de un archivo de audio accesible por el navegador; usa los botones para añadirlo al inicio, al final o en una posición.
+- **Búsqueda de YouTube:** escribe un título o artista y pulsa **Buscar**. Selecciona **Añadir y reproducir** para incorporar el resultado y mostrarlo en el reproductor oficial incrustado.
+- **Lista:** selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista.
+- Los controles de YouTube son los que proporciona el propio reproductor. No todos los videos permiten reproducción incrustada; también pueden aplicar restricciones regionales, de edad o del propietario.
+
+## Estructura del código
+
+| Ruta | Responsabilidad |
+| --- | --- |
+| `src/main.tsx` | Punto de entrada de React y montaje de la aplicación. |
+| `src/App.tsx` | Conecta la playlist, el reproductor, los formularios y la búsqueda. |
+| `src/types/Song.ts` | Modelo de canción; distingue audio normal de videos de YouTube. |
+| `src/core/TrackNode.ts` | Nodo con enlaces anterior/siguiente para la lista doblemente enlazada. |
+| `src/core/SongPlaylist.ts` | Operaciones de inserción, eliminación y navegación de la lista. |
+| `src/components/PlayerControls.tsx` | Reproducción de audio directo y reproductor incrustado de YouTube. |
+| `src/components/SongForm.tsx` | Formulario para agregar o eliminar canciones manualmente. |
+| `src/components/PlaylistView.tsx` | Vista visual de nodos, cabeza, cola y selección actual. |
+| `src/components/YouTubeSearch.tsx` | Formulario de búsqueda, resultados y acciones para añadir canciones. |
+| `src/services/youtube.ts` | Solicitud a YouTube Data API v3 y manejo de respuesta. |
+| `src/index.css` | Estilos globales. |
+
+## Comandos
+
+```powershell
+npm run dev      # Servidor local de desarrollo
+npm run build    # Verificación TypeScript y compilación de producción
+npm run lint     # Revisión estática con ESLint
+npm run preview  # Vista previa del build
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Seguridad de API keys
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- No pegues una clave real en `.env.example`, el código fuente, README, capturas o commits.
+- `.env.local` y otros archivos `.env.*` están excluidos por `.gitignore`; `.env.example` solo contiene un marcador de posición.
+- Las variables que comienzan por `VITE_` se incluyen en el código entregado al navegador. La API key **no es secreta**, aunque se lea desde `.env.local`; las restricciones de Google Cloud reducen el uso no autorizado, pero no la ocultan.
+- Para una aplicación pública, sirve las búsquedas desde un backend controlado por ti y protege la clave allí. Si una clave se filtra, revócala en Google Cloud y crea otra.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Diagnóstico
 
-```
+- **Falta `VITE_YOUTUBE_API_KEY`:** comprueba que `.env.local` esté junto a `package.json`, que el nombre de la variable sea exacto y reinicia Vite.
+- **`API key not valid` o `accessNotConfigured`:** revisa que la clave sea del proyecto que tiene YouTube Data API v3 habilitada.
+- **`RefererNotAllowedMapError` o error de referrer:** permite exactamente el origen que aparece en la barra del navegador y conserva `/*` al final de la regla.
+- **`quotaExceeded`:** se agotó la cuota del proyecto; revisa la cuota de YouTube Data API en Google Cloud.
+- **El video no se puede reproducir:** prueba otro resultado; la inserción puede estar deshabilitada por el propietario o el video tener restricciones.
