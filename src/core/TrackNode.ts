@@ -1,5 +1,7 @@
 import { Song } from "../types/Song"
-class TrackNode{
+
+/** Nodo de una lista doblemente enlazada que contiene una canción. */
+export class TrackNode{
     content: Song;
     nextSong: TrackNode | null;
     previousSong: TrackNode | null;
