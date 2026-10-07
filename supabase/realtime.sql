@@ -9,5 +9,5 @@ begin
   ) then
     execute 'alter publication supabase_realtime add table public.user_playlists';
   end if;
-end
+end;
 $$;
