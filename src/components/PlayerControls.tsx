@@ -3,7 +3,7 @@ import { TrackNode } from "../core/TrackNode";
 
 interface PlayerControlsProps{
     currentTrack: TrackNode | null;
-    onNext: () => void;
+    onNext: () => boolean;
     onPrevious: () => void;
 }
 
@@ -63,8 +63,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         audioRef.current = newAudio;
 
         newAudio.onended = () => {
-            onNextRef.current();
-            setIsPlaying(false);
+            setIsPlaying(onNextRef.current());
         };
 
         if (isPlayingRef.current) {

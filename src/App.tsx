@@ -314,7 +314,13 @@ export default function App() {
       <section className="listening-layout" aria-label="Reproductor y lista de reproducción">
         <PlayerControls
           currentTrack={playlist.getCurrent()}
-          onNext={() => { playlist.playNext(); refresh(); }}
+          onNext={() => {
+            const currentTrack = playlist.getCurrent();
+            if (!currentTrack || currentTrack === playlist.getTail()) return false;
+            playlist.playNext();
+            refresh();
+            return true;
+          }}
           onPrevious={() => { playlist.playPrevious(); refresh(); }}
         />
 
