@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { SongPlaylist } from './core/SongPlaylist';
-import { Song } from './types/Song';
 import { PlayerControls } from './components/PlayerControls';
-import { SongForm } from './components/SongForm';
 import { PlaylistView } from './components/PlaylistView';
+import { SongForm } from './components/SongForm';
 import { YouTubeSearch } from './components/YouTubeSearch';
+import { SongPlaylist } from './core/SongPlaylist';
 import type { YouTubeVideo } from './services/youtube';
+import { Song } from './types/Song';
 
 /**
  * Ensambla la interfaz y coordina las acciones sobre la playlist mutable.
@@ -25,7 +25,7 @@ export default function App() {
     refresh();
   };
 
-  /** Convierte un resultado de YouTube al modelo de canción y lo selecciona. */
+  /** Convierte un resultado de YouTube al modelo de canción y lo agrega al final. */
   const handleAddYouTubeSong = (video: YouTubeVideo) => {
     const song = new Song(
       crypto.randomUUID(),
@@ -36,7 +36,6 @@ export default function App() {
       'youtube',
     );
     playlist.insertAtEnd(song);
-    playlist.setCurrentNode(playlist.getTail());
     refresh();
   };
 

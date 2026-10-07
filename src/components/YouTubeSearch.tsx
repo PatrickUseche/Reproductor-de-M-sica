@@ -94,7 +94,7 @@ export function YouTubeSearch({ onAddSong }: YouTubeSearchProps) {
                   <p>{video.snippet.channelTitle}</p>
                 </div>
                 <button type="button" onClick={() => onAddSong(video)}>
-                  Añadir y reproducir
+                  Añadir a la lista
                 </button>
               </li>
             );

@@ -1,4 +1,4 @@
-import { Song} from "../types/Song";
+import { Song } from "../types/Song";
 import { TrackNode } from "./TrackNode";
 
 /**
@@ -38,13 +38,12 @@ export class SongPlaylist{
         return this._size;
     }
 
-    /** Inserta una canción al comienzo y la convierte en actual si es la primera. */
+    /** Inserta una canción al comienzo sin cambiar la pista actual. */
     insertAtStart(song: Song){
         const newNode: TrackNode = new TrackNode(song);
         if (this._head === null){
             this._head = newNode;
             this._tail = newNode;
-            this._current = newNode;
         }else{
             newNode.nextSong = this._head;
             this._head.previousSong = newNode;
@@ -53,13 +52,12 @@ export class SongPlaylist{
         this._size++;
     }
 
-    /** Inserta una canción al final y la convierte en actual si es la primera. */
+    /** Inserta una canción al final sin cambiar la pista actual. */
     insertAtEnd(song: Song){
         const newNode: TrackNode = new TrackNode(song);
         if (this._tail === null){
             this._head = newNode;
             this._tail = newNode;
-            this._current = newNode;
         }else{
             newNode.previousSong = this._tail;
             this._tail.nextSong = newNode;
