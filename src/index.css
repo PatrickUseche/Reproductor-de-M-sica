@@ -292,6 +292,13 @@ input::placeholder {
   gap: 5px;
 }
 
+.track-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
 .playlist-track {
   display: flex;
   flex: 1 1 auto;
@@ -316,6 +323,20 @@ input::placeholder {
 
 .remove-track-button:hover:not(:disabled) {
   background: #fbece8;
+}
+
+.move-track-button {
+  width: 32px;
+  min-height: 34px;
+  padding: 4px;
+  color: var(--teal-dark);
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.move-track-button:hover:not(:disabled) {
+  background: var(--teal-pale);
 }
 
 .playlist-track:hover:not(:disabled) {

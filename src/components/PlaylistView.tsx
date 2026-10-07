@@ -8,6 +8,7 @@ interface PlaylistViewProps {
   currentNode: TrackNode | null;
   onSelectSong: (node: TrackNode) => void;
   onDeleteSong: (position: number) => void;
+  onMoveSong: (position: number, direction: -1 | 1) => void;
 }
 
 /** Representa los enlaces y la selección actual de la lista doblemente enlazada. */
@@ -18,6 +19,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
   currentNode,
   onSelectSong,
   onDeleteSong,
+  onMoveSong,
 }) => {
   if (nodes.length === 0) {
     return (
@@ -74,20 +76,42 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
                   {isCurrent && <span className="track-tag tag-current">SELECCIONADA</span>}
                 </span>
               </button>
-              <button
-                className="remove-track-button"
-                type="button"
-                title={`Quitar ${song.getTitle()} de la lista`}
-                aria-label={`Quitar ${song.getTitle()} de la lista`}
-                onClick={() => {
-                  if (isCurrent && !window.confirm(`¿Quitar "${song.getTitle()}"? Se seleccionará otra canción.`)) {
-                    return;
-                  }
-                  onDeleteSong(index);
-                }}
-              >
-                Quitar
-              </button>
+              <div className="track-row-actions">
+                <button
+                  className="move-track-button"
+                  type="button"
+                  title={`Mover ${song.getTitle()} arriba`}
+                  aria-label={`Mover ${song.getTitle()} arriba`}
+                  disabled={index === 0}
+                  onClick={() => onMoveSong(index, -1)}
+                >
+                  ↑
+                </button>
+                <button
+                  className="move-track-button"
+                  type="button"
+                  title={`Mover ${song.getTitle()} abajo`}
+                  aria-label={`Mover ${song.getTitle()} abajo`}
+                  disabled={index === nodes.length - 1}
+                  onClick={() => onMoveSong(index, 1)}
+                >
+                  ↓
+                </button>
+                <button
+                  className="remove-track-button"
+                  type="button"
+                  title={`Quitar ${song.getTitle()} de la lista`}
+                  aria-label={`Quitar ${song.getTitle()} de la lista`}
+                  onClick={() => {
+                    if (isCurrent && !window.confirm(`¿Quitar "${song.getTitle()}"? Se seleccionará otra canción.`)) {
+                      return;
+                    }
+                    onDeleteSong(index);
+                  }}
+                >
+                  Quitar
+                </button>
+              </div>
             </li>
           );
         })}

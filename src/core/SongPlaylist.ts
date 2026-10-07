@@ -207,6 +207,54 @@ export class SongPlaylist{
         return true;
     }
 
+    /** Mueve una canción una posición arriba (`-1`) o abajo (`1`). */
+    moveAtPosition(position: number, direction: -1 | 1){
+        if (!Number.isInteger(position) || position < 0 || position >= this._size){
+            return false;
+        }
+
+        const targetPosition = position + direction;
+        if (targetPosition < 0 || targetPosition >= this._size){
+            return false;
+        }
+
+        let node = this._head;
+        for (let index = 0; index < position && node !== null; index++){
+            node = node.nextSong;
+        }
+
+        if (node === null){
+            return false;
+        }
+
+        const earlierNode = direction === -1 ? node.previousSong : node;
+        const laterNode = direction === -1 ? node : node.nextSong;
+        if (earlierNode === null || laterNode === null){
+            return false;
+        }
+
+        const previousNode = earlierNode.previousSong;
+        const nextNode = laterNode.nextSong;
+
+        if (previousNode !== null){
+            previousNode.nextSong = laterNode;
+        }else{
+            this._head = laterNode;
+        }
+        laterNode.previousSong = previousNode;
+        laterNode.nextSong = earlierNode;
+        earlierNode.previousSong = laterNode;
+        earlierNode.nextSong = nextNode;
+
+        if (nextNode !== null){
+            nextNode.previousSong = earlierNode;
+        }else{
+            this._tail = earlierNode;
+        }
+
+        return true;
+    }
+
     /** Avanza una posición; se mantiene en la cola al llegar al final. */
     playNext(){
         if (this._current === null) {

@@ -61,6 +61,9 @@ export default function App() {
           currentNode={playlist.getCurrent()}
           onSelectSong={handleSelectSong}
           onDeleteSong={(position) => { playlist.deleteAtPosition(position); refresh(); }}
+          onMoveSong={(position, direction) => {
+            if (playlist.moveAtPosition(position, direction)) refresh();
+          }}
         />
       </section>
 
