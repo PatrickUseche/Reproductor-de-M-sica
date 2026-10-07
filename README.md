@@ -48,11 +48,11 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 
 ## Uso
 
-- **Audio local/directo:** completa título, artista, duración y URL de un archivo de audio accesible por el navegador; usa los botones para añadirlo al inicio, al final o en una posición.
+- **Audio local:** arrastra archivos de audio al área de carga. Se agregan al final sin iniciar la reproducción; el título se toma del nombre del archivo.
 - **Búsqueda de YouTube:** escribe un título o artista y pulsa **Buscar**. Selecciona **Añadir y reproducir** para incorporar el resultado y mostrarlo en el reproductor oficial incrustado.
 - **Lista:** selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista.
 - **Cuenta:** crea una cuenta o inicia sesión para cargar y guardar la playlist personal en Supabase. El orden y la canción seleccionada se restauran al volver a iniciar sesión y los cambios se sincronizan en vivo entre sesiones abiertas.
-- Supabase guarda los datos de las canciones y sus URLs, no copia los archivos de audio. Para reproducirse desde otros dispositivos, cada URL de audio debe ser accesible públicamente.
+- Los archivos arrastrados se reproducen solo durante la sesión actual del navegador y no se suben a Supabase; no estarán disponibles después de cerrar o recargar la pestaña ni en otros dispositivos. Las pistas de YouTube y URLs persistentes siguen sincronizándose con la cuenta.
 - Los controles de YouTube son los que proporciona el propio reproductor. No todos los videos permiten reproducción incrustada; también pueden aplicar restricciones regionales, de edad o del propietario.
 
 ## Estructura del código

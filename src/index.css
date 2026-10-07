@@ -458,29 +458,12 @@ input::placeholder {
   margin-bottom: 16px;
 }
 
-.song-fields,
-.song-form-actions,
 .youtube-search-form {
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
 }
 
-.song-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.song-fields input:first-child,
-.song-fields input:nth-child(4) {
-  grid-column: 1 / -1;
-}
-
-.song-form-actions {
-  margin-top: 12px;
-}
-
-.song-form-actions button,
 .youtube-search-form button {
   flex: 1 1 auto;
 }
@@ -566,6 +549,52 @@ input::placeholder {
   margin-top: 10px;
   color: #a33f32;
   font-size: 13px;
+}
+
+.audio-dropzone {
+  display: grid;
+  min-height: 190px;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  border: 2px dashed #a8c2ba;
+  border-radius: 5px;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+  background: #f8fbf9;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.audio-dropzone.is-dragging {
+  border-color: var(--teal);
+  background: var(--teal-pale);
+}
+
+.audio-dropzone strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.audio-dropzone > span:last-child {
+  font-size: 12px;
+}
+
+.audio-drop-icon {
+  display: grid;
+  width: 42px;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--teal-dark);
+  background: var(--teal-pale);
+  font-size: 24px;
+}
+
+.audio-local-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .account-panel {
@@ -745,15 +774,6 @@ input::placeholder {
   .playlist-panel,
   .tool-panel {
     padding: 16px;
-  }
-
-  .song-fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .song-fields input:first-child,
-  .song-fields input:nth-child(4) {
-    grid-column: auto;
   }
 
   .playlist-track {

@@ -1,111 +1,75 @@
-import React, { useState } from "react";
-import { Song } from "../types/Song";
+import { useState, type DragEvent } from 'react';
 
 interface SongFormProps {
-  onInsertStart: (song: Song) => void;
-  onInsertEnd: (song: Song) => void;
-  onInsertPosition: (song: Song, position: number) => void;
-  onDeletePosition: (position: number) => void;
+  onAddFiles: (files: File[]) => Promise<void>;
 }
 
-/** Permite insertar pistas de audio directo y borrar una pista por índice. */
-export const SongForm: React.FC<SongFormProps> = ({
-  onInsertStart,
-  onInsertEnd,
-  onInsertPosition,
-  onDeletePosition,
-}) => {
-  const [title, setTitle] = useState('');
-  const [artist, setArtist] = useState('');
-  const [duration, setDuration] = useState('');
-  const [position, setPosition] = useState(0);
-  const [audioUrl, setAudioUrl] = useState('');
+const audioFileExtension = /\.(aac|aif|aiff|flac|m4a|mp3|oga|ogg|opus|wav)$/i;
 
-  /** Valida el formulario y construye el modelo usado por la playlist. */
-  const createSongFromInput = (): Song | null => {
-    if (!title.trim() || !artist.trim() || !duration || !audioUrl.trim()) {
-      alert('Por favor completa todos los campos (título, artista, duración y URL de audio).');
-      return null;
+function isAudioFile(file: File) {
+  return file.type.startsWith('audio/') || (!file.type && audioFileExtension.test(file.name));
+}
+
+/** Añade archivos de audio locales soltándolos directamente en la zona. */
+export function SongForm({ onAddFiles }: SongFormProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    setMessage('');
+    setError('');
+
+    const droppedFiles = Array.from(event.dataTransfer.files);
+    const audioFiles = droppedFiles.filter(isAudioFile);
+    const rejectedCount = droppedFiles.length - audioFiles.length;
+
+    if (audioFiles.length === 0) {
+      setError('Suelta archivos de audio compatibles, como MP3, WAV, M4A u OGG.');
+      return;
     }
 
-    const id = crypto.randomUUID();
-    return new Song(id, title, artist, Number(duration), audioUrl);
-  };
-
-  /** Limpia los datos de la pista después de insertarla correctamente. */
-  const clearInputs = () => {
-    setTitle('');
-    setArtist('');
-    setDuration('');
+    setIsProcessing(true);
+    try {
+      await onAddFiles(audioFiles);
+      setMessage(`${audioFiles.length} ${audioFiles.length === 1 ? 'canción agregada' : 'canciones agregadas'} al final de la lista.`);
+      if (rejectedCount > 0) {
+        setError(`${rejectedCount} ${rejectedCount === 1 ? 'archivo no era' : 'archivos no eran'} de audio y no se agregó${rejectedCount === 1 ? '' : 'n'}.`);
+      }
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : 'No se pudieron agregar los archivos.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
     <section className="tool-panel" aria-labelledby="song-form-title">
-      <h2 id="song-form-title">Agregar una canción</h2>
-
-      <div className="song-fields">
-        <input
-          type="text"
-          placeholder="Título"
-          aria-label="Título de la canción"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Artista"
-          aria-label="Artista"
-          value={artist}
-          onChange={(e) => setArtist(e.target.value)}
-        />
-        <input
-          type="number"
-          placeholder="Duración (segundos)"
-          aria-label="Duración en segundos"
-          min="0"
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="URL del archivo de audio (.mp3)"
-          aria-label="URL del archivo de audio"
-          value={audioUrl}
-          onChange={(e) => setAudioUrl(e.target.value)}
-        />
-        <input
-          type="number"
-          placeholder="Posición (empieza en 0)"
-          aria-label="Posición de la canción, empezando en cero"
-          min="0"
-          value={position}
-          onChange={(e) => setPosition(Number(e.target.value))}
-        />
+      <h2 id="song-form-title">Agregar canciones locales</h2>
+      <div
+        className={`audio-dropzone${isDragging ? ' is-dragging' : ''}`}
+        role="region"
+        aria-label="Zona para arrastrar archivos de audio"
+        onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
+        onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; setIsDragging(true); }}
+        onDragLeave={(event) => {
+          const relatedTarget = event.relatedTarget;
+          if (!(relatedTarget instanceof Node) || !event.currentTarget.contains(relatedTarget)) {
+            setIsDragging(false);
+          }
+        }}
+        onDrop={(event) => { void handleDrop(event); }}
+      >
+        <span className="audio-drop-icon" aria-hidden="true">↓</span>
+        <strong>{isProcessing ? 'Agregando canciones…' : isDragging ? 'Suelta para agregar' : 'Arrastra tus archivos de audio aquí'}</strong>
+        <span>MP3, WAV, M4A, OGG y otros formatos de audio</span>
       </div>
-
-      <div className="song-form-actions">
-        <button type="button" onClick={() => {
-          const song = createSongFromInput();
-          if (song) { onInsertStart(song); clearInputs(); }
-        }}>
-          Agregar al Inicio
-        </button>
-        <button type="button" onClick={() => {
-          const song = createSongFromInput();
-          if (song) { onInsertEnd(song); clearInputs(); }
-        }}>
-          Agregar al Final
-        </button>
-        <button type="button" onClick={() => {
-          const song = createSongFromInput();
-          if (song) { onInsertPosition(song, position); clearInputs(); }
-        }}>
-          Agregar en Posición
-        </button>
-        <button type="button" className="danger-button" onClick={() => onDeletePosition(position)}>
-          Eliminar Posición
-        </button>
-      </div>
+      <p className="audio-local-note">Los archivos solo estarán disponibles en esta pestaña; no se suben a la nube.</p>
+      {message && <p className="account-message" role="status">{message}</p>}
+      {error && <p className="form-error" role="alert">{error}</p>}
     </section>
   );
-};
+}

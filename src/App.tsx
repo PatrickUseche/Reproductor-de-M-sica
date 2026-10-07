@@ -7,12 +7,12 @@ import { SongForm } from './components/SongForm';
 import { YouTubeSearch } from './components/YouTubeSearch';
 import { SongPlaylist } from './core/SongPlaylist';
 import {
-  deserializePlaylist,
-  loadPlaylist,
-  savePlaylist,
-  serializePlaylist,
-  subscribeToPlaylist,
-  type PlaylistSnapshot,
+    deserializePlaylist,
+    loadPlaylist,
+    savePlaylist,
+    serializePlaylist,
+    subscribeToPlaylist,
+    type PlaylistSnapshot,
 } from './services/playlistPersistence';
 import { supabase } from './services/supabase';
 import type { YouTubeVideo } from './services/youtube';
@@ -34,6 +34,21 @@ function snapshotsMatch(left: PlaylistSnapshot, right: PlaylistSnapshot) {
 
 function restorePlaylist(playlist: SongPlaylist, snapshot: PlaylistSnapshot) {
   playlist.replaceAll(deserializePlaylist(snapshot), snapshot.currentSongId);
+}
+
+function restoreRemotePlaylist(playlist: SongPlaylist, snapshot: PlaylistSnapshot) {
+  const localSongs = playlist.toArray()
+    .map((node) => node.content)
+    .filter((song) => song.getAudioUrl().startsWith('blob:'));
+  const currentSong = playlist.getCurrent()?.content;
+  const currentLocalSongId = currentSong?.getAudioUrl().startsWith('blob:')
+    ? currentSong.getId()
+    : null;
+
+  playlist.replaceAll(
+    [...deserializePlaylist(snapshot), ...localSongs],
+    currentLocalSongId ?? snapshot.currentSongId,
+  );
 }
 
 /**
@@ -67,6 +82,16 @@ export default function App() {
     playlistDirtyRef.current = playlistDirty;
     syncStatusRef.current = syncStatus;
   }, [playlistDirty, syncStatus]);
+
+  useEffect(() => {
+    if (session) return;
+
+    for (const node of playlist.toArray()) {
+      const audioUrl = node.content.getAudioUrl();
+      if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+    }
+    playlist.replaceAll([]);
+  }, [playlist, session]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -134,7 +159,7 @@ export default function App() {
       );
       if (snapshotsMatch(currentSnapshot, snapshot) || playlistDirtyRef.current || syncStatusRef.current === 'saving') return;
 
-      restorePlaylist(playlist, snapshot);
+      restoreRemotePlaylist(playlist, snapshot);
       setVersion((currentVersion) => currentVersion + 1);
       setSyncStatus('saved');
       setSyncError('');
@@ -299,7 +324,13 @@ export default function App() {
           tailNode={playlist.getTail()}
           currentNode={playlist.getCurrent()}
           onSelectSong={handleSelectSong}
-          onDeleteSong={(position) => { playlist.deleteAtPosition(position); refresh(); }}
+          onDeleteSong={(position) => {
+            const song = playlist.toArray()[position]?.content;
+            if (!playlist.deleteAtPosition(position)) return;
+            const audioUrl = song?.getAudioUrl();
+            if (audioUrl?.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+            refresh();
+          }}
           onMoveSong={(position, direction) => {
             if (playlist.moveAtPosition(position, direction)) refresh();
           }}
@@ -308,10 +339,30 @@ export default function App() {
 
       <section className="library-tools" aria-label="Administrar música">
         <SongForm
-          onInsertStart={(song: Song) => { playlist.insertAtStart(song); refresh(); }}
-          onInsertEnd={(song: Song) => { playlist.insertAtEnd(song); refresh(); }}
-          onInsertPosition={(song: Song, pos: number) => { playlist.insertAtPosition(song, pos); refresh(); }}
-          onDeletePosition={(pos: number) => { playlist.deleteAtPosition(pos); refresh(); }}
+          onAddFiles={async (files) => {
+            const songs = await Promise.all(files.map(async (file) => {
+              const audioUrl = URL.createObjectURL(file);
+              const audio = new Audio();
+              audio.preload = 'metadata';
+              const duration = await new Promise<number>((resolve) => {
+                const finish = (value: number) => {
+                  audio.onloadedmetadata = null;
+                  audio.onerror = null;
+                  audio.removeAttribute('src');
+                  audio.load();
+                  resolve(Number.isFinite(value) ? Math.round(value) : 0);
+                };
+                audio.onloadedmetadata = () => finish(audio.duration);
+                audio.onerror = () => finish(0);
+                audio.src = audioUrl;
+              });
+              const title = file.name.replace(/\.[^.]+$/, '') || file.name;
+              return new Song(crypto.randomUUID(), title, 'Archivo local', duration, audioUrl);
+            }));
+
+            songs.forEach((song) => playlist.insertAtEnd(song));
+            refresh();
+          }}
         />
 
         <YouTubeSearch onAddSong={handleAddYouTubeSong} />

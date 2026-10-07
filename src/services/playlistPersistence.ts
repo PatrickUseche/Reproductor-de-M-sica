@@ -27,8 +27,11 @@ export function deserializePlaylist(snapshot: PlaylistSnapshot | null): Song[] {
 }
 
 export function serializePlaylist(songs: Song[], currentSongId: string | null): PlaylistSnapshot {
+  const persistentSongs = songs.filter((song) => !song.getAudioUrl().startsWith('blob:'));
+  const persistentSongIds = new Set(persistentSongs.map((song) => song.getId()));
+
   return {
-    songs: songs.map((song) => ({
+    songs: persistentSongs.map((song) => ({
       id: song.getId(),
       title: song.getTitle(),
       artist: song.getArtist(),
@@ -36,7 +39,7 @@ export function serializePlaylist(songs: Song[], currentSongId: string | null): 
       audioUrl: song.getAudioUrl(),
       source: song.getSource(),
     })),
-    currentSongId,
+    currentSongId: currentSongId && persistentSongIds.has(currentSongId) ? currentSongId : null,
   };
 }
 
