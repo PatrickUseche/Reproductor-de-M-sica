@@ -288,4 +288,19 @@ export class SongPlaylist{
     setCurrentNode(node: TrackNode | null){
         this._current = node;
     }
+
+    /** Reemplaza el contenido de la lista y restaura la pista seleccionada por ID. */
+    replaceAll(songs: Song[], currentSongId: string | null = null){
+        this._head = null;
+        this._tail = null;
+        this._current = null;
+        this._size = 0;
+
+        for (const song of songs){
+            this.insertAtEnd(song);
+            if (song.getId() === currentSongId){
+                this._current = this._tail;
+            }
+        }
+    }
 }

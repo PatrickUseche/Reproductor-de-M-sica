@@ -29,9 +29,14 @@ Aplicación de React y TypeScript que administra una lista doblemente enlazada, 
 
    ```env
    VITE_YOUTUBE_API_KEY=tu_clave_de_google_cloud
+   VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+   VITE_SUPABASE_ANON_KEY=tu-clave-publica-anon
    ```
 
-6. Inicia el servidor:
+6. En Supabase, ejecuta el contenido de `supabase/schema.sql` desde el SQL Editor y configura la URL desplegada en **Authentication → URL Configuration** como Site URL y URL permitida de redirección.
+7. Para el acceso de un clic, habilita Google en **Authentication → Sign In / Providers** de Supabase con las credenciales OAuth de Google. Añade a Google la URL callback que muestra Supabase y permite el dominio desplegado en la configuración de URLs. El formulario de correo y contraseña permanece disponible como alternativa.
+8. Configura `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` también en las variables de entorno del servicio donde está desplegada la aplicación. Vuelve a compilar y desplegar después de añadirlas.
+9. Inicia el servidor:
 
    ```powershell
    npm run dev
@@ -44,6 +49,8 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 - **Audio local/directo:** completa título, artista, duración y URL de un archivo de audio accesible por el navegador; usa los botones para añadirlo al inicio, al final o en una posición.
 - **Búsqueda de YouTube:** escribe un título o artista y pulsa **Buscar**. Selecciona **Añadir y reproducir** para incorporar el resultado y mostrarlo en el reproductor oficial incrustado.
 - **Lista:** selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista.
+- **Cuenta:** crea una cuenta o inicia sesión para cargar y guardar la playlist personal en Supabase. El orden y la canción seleccionada se restauran al volver a iniciar sesión.
+- Supabase guarda los datos de las canciones y sus URLs, no copia los archivos de audio. Para reproducirse desde otros dispositivos, cada URL de audio debe ser accesible públicamente.
 - Los controles de YouTube son los que proporciona el propio reproductor. No todos los videos permiten reproducción incrustada; también pueden aplicar restricciones regionales, de edad o del propietario.
 
 ## Estructura del código
@@ -60,6 +67,9 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 | `src/components/PlaylistView.tsx` | Vista visual de nodos, cabeza, cola y selección actual. |
 | `src/components/YouTubeSearch.tsx` | Formulario de búsqueda, resultados y acciones para añadir canciones. |
 | `src/services/youtube.ts` | Solicitud a YouTube Data API v3 y manejo de respuesta. |
+| `src/services/supabase.ts` | Configuración del cliente Supabase desde variables de entorno. |
+| `src/services/playlistPersistence.ts` | Conversión y persistencia remota de playlists. |
+| `supabase/schema.sql` | Tabla de playlists y políticas RLS por usuario. |
 | `src/index.css` | Estilos globales. |
 
 ## Comandos
