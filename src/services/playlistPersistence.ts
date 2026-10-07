@@ -1,4 +1,4 @@
-import type { Song } from '../types/Song';
+import { Song } from '../types/Song';
 import { supabase } from './supabase';
 
 export interface SongSnapshot {
@@ -13,6 +13,17 @@ export interface SongSnapshot {
 export interface PlaylistSnapshot {
   songs: SongSnapshot[];
   currentSongId: string | null;
+}
+
+export function deserializePlaylist(snapshot: PlaylistSnapshot | null): Song[] {
+  return snapshot?.songs.map((item) => new Song(
+    item.id,
+    item.title,
+    item.artist,
+    item.duration,
+    item.audioUrl,
+    item.source,
+  )) ?? [];
 }
 
 export function serializePlaylist(songs: Song[], currentSongId: string | null): PlaylistSnapshot {
@@ -52,4 +63,25 @@ export async function savePlaylist(userId: string, snapshot: PlaylistSnapshot): 
   });
 
   if (error) throw error;
+}
+
+export function subscribeToPlaylist(
+  userId: string,
+  onUpdate: (snapshot: PlaylistSnapshot) => void,
+  onStatus: (status: string) => void,
+) {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+
+  return supabase
+    .channel(`user-playlist:${userId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'user_playlists',
+      filter: `user_id=eq.${userId}`,
+    }, (payload) => {
+      const row = payload.new as { playlist_data?: PlaylistSnapshot };
+      if (row.playlist_data) onUpdate(row.playlist_data);
+    })
+    .subscribe((status) => onStatus(status));
 }

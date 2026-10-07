@@ -1,15 +1,40 @@
-import { useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { useEffect, useRef, useState } from 'react';
 import { AccountAccess } from './components/AccountAccess';
 import { PlayerControls } from './components/PlayerControls';
 import { PlaylistView } from './components/PlaylistView';
 import { SongForm } from './components/SongForm';
 import { YouTubeSearch } from './components/YouTubeSearch';
 import { SongPlaylist } from './core/SongPlaylist';
-import { loadPlaylist, savePlaylist, serializePlaylist } from './services/playlistPersistence';
+import {
+  deserializePlaylist,
+  loadPlaylist,
+  savePlaylist,
+  serializePlaylist,
+  subscribeToPlaylist,
+  type PlaylistSnapshot,
+} from './services/playlistPersistence';
 import { supabase } from './services/supabase';
 import type { YouTubeVideo } from './services/youtube';
 import { Song } from './types/Song';
+
+function snapshotsMatch(left: PlaylistSnapshot, right: PlaylistSnapshot) {
+  return left.currentSongId === right.currentSongId
+    && left.songs.length === right.songs.length
+    && left.songs.every((song, index) => {
+      const other = right.songs[index];
+      return song.id === other.id
+        && song.title === other.title
+        && song.artist === other.artist
+        && song.duration === other.duration
+        && song.audioUrl === other.audioUrl
+        && song.source === other.source;
+    });
+}
+
+function restorePlaylist(playlist: SongPlaylist, snapshot: PlaylistSnapshot) {
+  playlist.replaceAll(deserializePlaylist(snapshot), snapshot.currentSongId);
+}
 
 /**
  * Ensambla la interfaz y coordina las acciones sobre la playlist mutable.
@@ -25,14 +50,23 @@ export default function App() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [playlistDirty, setPlaylistDirty] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [syncError, setSyncError] = useState('');
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveRevision = useRef(0);
+  const playlistDirtyRef = useRef(false);
+  const syncStatusRef = useRef(syncStatus);
   const refresh = () => {
+    playlistDirtyRef.current = true;
     setVersion((currentVersion) => currentVersion + 1);
     setPlaylistDirty(true);
     setSyncError('');
   };
+
+  useEffect(() => {
+    playlistDirtyRef.current = playlistDirty;
+    syncStatusRef.current = syncStatus;
+  }, [playlistDirty, syncStatus]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -43,7 +77,9 @@ export default function App() {
       if (sessionUserId.current !== nextUserId) {
         setLoadedUserId(null);
         setLoadError('');
+        playlistDirtyRef.current = false;
         setPlaylistDirty(false);
+        setRealtimeStatus('connecting');
       }
       sessionUserId.current = nextUserId;
       setSession(nextSession);
@@ -74,15 +110,7 @@ export default function App() {
 
     void loadPlaylist(userId).then((snapshot) => {
       if (!active) return;
-      const songs = snapshot?.songs.map((item) => new Song(
-        item.id,
-        item.title,
-        item.artist,
-        item.duration,
-        item.audioUrl,
-        item.source,
-      )) ?? [];
-      playlist.replaceAll(songs, snapshot?.currentSongId ?? null);
+      restorePlaylist(playlist, snapshot ?? { songs: [], currentSongId: null });
       setLoadedUserId(userId);
       setSyncStatus('saved');
     }).catch((error: unknown) => {
@@ -95,6 +123,33 @@ export default function App() {
       active = false;
     };
   }, [userId, loadAttempt, playlist]);
+
+  useEffect(() => {
+    if (!userId || loadedUserId !== userId) return;
+
+    const channel = subscribeToPlaylist(userId, (snapshot) => {
+      const currentSnapshot = serializePlaylist(
+        playlist.toArray().map((node) => node.content),
+        playlist.getCurrent()?.content.getId() ?? null,
+      );
+      if (snapshotsMatch(currentSnapshot, snapshot) || playlistDirtyRef.current || syncStatusRef.current === 'saving') return;
+
+      restorePlaylist(playlist, snapshot);
+      setVersion((currentVersion) => currentVersion + 1);
+      setSyncStatus('saved');
+      setSyncError('');
+    }, (status) => {
+      if (status === 'SUBSCRIBED') {
+        setRealtimeStatus('connected');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        setRealtimeStatus('disconnected');
+      }
+    });
+
+    return () => {
+      void supabase?.removeChannel(channel);
+    };
+  }, [loadedUserId, playlist, userId]);
 
   useEffect(() => {
     const userId = session?.user.id;
@@ -115,6 +170,7 @@ export default function App() {
 
       void saveOperation.then(() => {
         if (revision !== saveRevision.current) return;
+        playlistDirtyRef.current = false;
         setPlaylistDirty(false);
         setSyncStatus('saved');
         setSyncError('');
@@ -210,7 +266,15 @@ export default function App() {
             <div>
               <p>{session.user.email}</p>
               <p className={syncStatus === 'error' ? 'sync-error' : 'sync-status'}>
-                {syncStatus === 'saving' ? 'Guardando cambios…' : syncStatus === 'saved' ? 'Playlist sincronizada' : syncStatus === 'error' ? 'Error de sincronización' : ''}
+                {syncStatus === 'saving'
+                  ? 'Guardando cambios…'
+                  : syncStatus === 'error'
+                    ? 'Error de sincronización'
+                    : realtimeStatus === 'connected'
+                      ? 'Sincronizada en vivo'
+                      : realtimeStatus === 'disconnected'
+                        ? 'Guardada; sincronización en vivo desconectada'
+                        : 'Playlist sincronizada'}
               </p>
               {syncError && <p className="sync-error" role="alert">{syncError}</p>}
             </div>
