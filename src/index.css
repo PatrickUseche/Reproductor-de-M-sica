@@ -184,6 +184,12 @@ input::placeholder {
   background: #17201e;
 }
 
+.youtube-player-host {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #17201e;
+}
+
 .player-note {
   font-size: 13px;
 }

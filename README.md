@@ -64,13 +64,14 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 | `src/types/Song.ts` | Modelo de canción; distingue audio normal de videos de YouTube. |
 | `src/core/TrackNode.ts` | Nodo con enlaces anterior/siguiente para la lista doblemente enlazada. |
 | `src/core/SongPlaylist.ts` | Operaciones de inserción, eliminación y navegación de la lista. |
-| `src/components/PlayerControls.tsx` | Reproducción de audio directo y reproductor incrustado de YouTube. |
+| `src/components/PlayerControls.tsx` | Reproducción de audio directo y reproductor de YouTube con avance al finalizar. |
 | `src/components/SongForm.tsx` | Formulario para agregar o eliminar canciones manualmente. |
 | `src/components/PlaylistView.tsx` | Vista visual de nodos, cabeza, cola y selección actual. |
 | `src/components/YouTubeSearch.tsx` | Formulario de búsqueda, resultados y acciones para añadir canciones. |
 | `src/services/youtube.ts` | Solicitud a YouTube Data API v3 y manejo de respuesta. |
 | `src/services/supabase.ts` | Configuración del cliente Supabase desde variables de entorno. |
 | `src/services/playlistPersistence.ts` | Conversión y persistencia remota de playlists. |
+| `src/services/youtubeIframeApi.ts` | Carga de la API oficial de YouTube IFrame Player. |
 | `supabase/schema.sql` | Tabla de playlists y políticas RLS por usuario. |
 | `supabase/realtime.sql` | Habilita notificaciones en vivo para la tabla de playlists. |
 | `src/index.css` | Estilos globales. |
