@@ -60,6 +60,7 @@ export default function App() {
           tailNode={playlist.getTail()}
           currentNode={playlist.getCurrent()}
           onSelectSong={handleSelectSong}
+          onDeleteSong={(position) => { playlist.deleteAtPosition(position); refresh(); }}
         />
       </section>
 

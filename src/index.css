@@ -286,19 +286,36 @@ input::placeholder {
 }
 
 .playlist-item {
+  display: flex;
   min-width: 0;
+  align-items: center;
+  gap: 5px;
 }
 
 .playlist-track {
   display: flex;
-  width: 100%;
+  flex: 1 1 auto;
   min-height: 62px;
+  min-width: 0;
   align-items: center;
   gap: 11px;
   border-color: transparent;
   padding: 8px 9px;
   text-align: left;
   background: transparent;
+}
+
+.remove-track-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 6px 9px;
+  color: #963d2f;
+  background: transparent;
+  font-size: 12px;
+}
+
+.remove-track-button:hover:not(:disabled) {
+  background: #fbece8;
 }
 
 .playlist-track:hover:not(:disabled) {

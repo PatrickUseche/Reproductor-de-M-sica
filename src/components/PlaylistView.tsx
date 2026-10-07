@@ -7,6 +7,7 @@ interface PlaylistViewProps {
   tailNode: TrackNode | null;
   currentNode: TrackNode | null;
   onSelectSong: (node: TrackNode) => void;
+  onDeleteSong: (position: number) => void;
 }
 
 /** Representa los enlaces y la selección actual de la lista doblemente enlazada. */
@@ -16,6 +17,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
   tailNode,
   currentNode,
   onSelectSong,
+  onDeleteSong,
 }) => {
   if (nodes.length === 0) {
     return (
@@ -71,6 +73,20 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
                   {isTail && <span className="track-tag tag-tail">FINAL</span>}
                   {isCurrent && <span className="track-tag tag-current">SELECCIONADA</span>}
                 </span>
+              </button>
+              <button
+                className="remove-track-button"
+                type="button"
+                title={`Quitar ${song.getTitle()} de la lista`}
+                aria-label={`Quitar ${song.getTitle()} de la lista`}
+                onClick={() => {
+                  if (isCurrent && !window.confirm(`¿Quitar "${song.getTitle()}"? Se seleccionará otra canción.`)) {
+                    return;
+                  }
+                  onDeleteSong(index);
+                }}
+              >
+                Quitar
               </button>
             </li>
           );
