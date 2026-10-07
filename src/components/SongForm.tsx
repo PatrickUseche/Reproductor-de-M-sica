@@ -40,65 +40,72 @@ export const SongForm: React.FC<SongFormProps> = ({
   };
 
   return (
-    <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-      <h3>Administrar Canciones</h3>
+    <section className="tool-panel" aria-labelledby="song-form-title">
+      <h2 id="song-form-title">Agregar una canción</h2>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '350px' }}>
+      <div className="song-fields">
         <input
           type="text"
           placeholder="Título"
+          aria-label="Título de la canción"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <input
           type="text"
           placeholder="Artista"
+          aria-label="Artista"
           value={artist}
           onChange={(e) => setArtist(e.target.value)}
         />
         <input
           type="number"
           placeholder="Duración (segundos)"
+          aria-label="Duración en segundos"
+          min="0"
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
         />
         <input
           type="text"
           placeholder="URL del archivo de audio (.mp3)"
+          aria-label="URL del archivo de audio"
           value={audioUrl}
           onChange={(e) => setAudioUrl(e.target.value)}
         />
         <input
           type="number"
-          placeholder="Posición (índice)"
+          placeholder="Posición (empieza en 0)"
+          aria-label="Posición de la canción, empezando en cero"
+          min="0"
           value={position}
           onChange={(e) => setPosition(Number(e.target.value))}
         />
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
-        <button onClick={() => {
+      <div className="song-form-actions">
+        <button type="button" onClick={() => {
           const song = createSongFromInput();
           if (song) { onInsertStart(song); clearInputs(); }
         }}>
           Agregar al Inicio
         </button>
-        <button onClick={() => {
+        <button type="button" onClick={() => {
           const song = createSongFromInput();
           if (song) { onInsertEnd(song); clearInputs(); }
         }}>
           Agregar al Final
         </button>
-        <button onClick={() => {
+        <button type="button" onClick={() => {
           const song = createSongFromInput();
           if (song) { onInsertPosition(song, position); clearInputs(); }
         }}>
           Agregar en Posición
         </button>
-        <button onClick={() => onDeletePosition(position)} style={{ backgroundColor: '#ff4d4d', color: 'white' }}>
+        <button type="button" className="danger-button" onClick={() => onDeletePosition(position)}>
           Eliminar Posición
         </button>
       </div>
-    </div>
+    </section>
   );
 };

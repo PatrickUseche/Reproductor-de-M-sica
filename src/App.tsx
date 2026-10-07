@@ -40,31 +40,39 @@ export default function App() {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '900px', margin: '0 auto' }}>
-      <h1>Reproductor de Música</h1>
+    <main className="app-shell">
+      <header className="app-header">
+        <p className="eyebrow">TU ESPACIO DE AUDIO</p>
+        <h1>Reproductor de Música</h1>
+        <p className="app-description">Organiza tu lista y elige qué escuchar.</p>
+      </header>
 
-      <PlayerControls
-        currentTrack={playlist.getCurrent()}
-        onNext={() => { playlist.playNext(); refresh(); }}
-        onPrevious={() => { playlist.playPrevious(); refresh(); }}
-      />
+      <section className="listening-layout" aria-label="Reproductor y lista de reproducción">
+        <PlayerControls
+          currentTrack={playlist.getCurrent()}
+          onNext={() => { playlist.playNext(); refresh(); }}
+          onPrevious={() => { playlist.playPrevious(); refresh(); }}
+        />
 
-      <SongForm
-        onInsertStart={(song: Song) => { playlist.insertAtStart(song); refresh(); }}
-        onInsertEnd={(song: Song) => { playlist.insertAtEnd(song); refresh(); }}
-        onInsertPosition={(song: Song, pos: number) => { playlist.insertAtPosition(song, pos); refresh(); }}
-        onDeletePosition={(pos: number) => { playlist.deleteAtPosition(pos); refresh(); }}
-      />
+        <PlaylistView
+          nodes={playlist.toArray()}
+          headNode={playlist.getHead()}
+          tailNode={playlist.getTail()}
+          currentNode={playlist.getCurrent()}
+          onSelectSong={handleSelectSong}
+        />
+      </section>
 
-      <YouTubeSearch onAddSong={handleAddYouTubeSong} />
+      <section className="library-tools" aria-label="Administrar música">
+        <SongForm
+          onInsertStart={(song: Song) => { playlist.insertAtStart(song); refresh(); }}
+          onInsertEnd={(song: Song) => { playlist.insertAtEnd(song); refresh(); }}
+          onInsertPosition={(song: Song, pos: number) => { playlist.insertAtPosition(song, pos); refresh(); }}
+          onDeletePosition={(pos: number) => { playlist.deleteAtPosition(pos); refresh(); }}
+        />
 
-      <PlaylistView
-        nodes={playlist.toArray()}
-        headNode={playlist.getHead()}
-        tailNode={playlist.getTail()}
-        currentNode={playlist.getCurrent()}
-        onSelectSong={handleSelectSong}
-      />
-    </div>
+        <YouTubeSearch onAddSong={handleAddYouTubeSong} />
+      </section>
+    </main>
   );
 }

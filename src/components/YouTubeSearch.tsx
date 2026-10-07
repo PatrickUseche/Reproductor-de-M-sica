@@ -43,53 +43,40 @@ export function YouTubeSearch({ onAddSong }: YouTubeSearchProps) {
   };
 
   return (
-    <section style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-      <h3>Buscar canciones en YouTube</h3>
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+    <section className="tool-panel" aria-labelledby="youtube-search-title">
+      <h2 id="youtube-search-title">Buscar en YouTube</h2>
+      <form className="youtube-search-form" onSubmit={handleSearch}>
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Ej.: nombre de canción o artista"
           aria-label="Buscar canciones en YouTube"
-          style={{ flex: '1 1 250px' }}
         />
         <button type="submit" disabled={isLoading}>
           {isLoading ? 'Buscando…' : 'Buscar'}
         </button>
       </form>
 
-      {error && <p role="alert" style={{ color: '#b00020', marginTop: '10px' }}>{error}</p>}
+      {error && <p className="form-error" role="alert">{error}</p>}
 
       {videos.length > 0 && (
-        <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: '12px' }}>
+        <ul className="youtube-results">
           {videos.map((video) => {
             const thumbnail =
               video.snippet.thumbnails.medium?.url ?? video.snippet.thumbnails.default?.url;
 
             return (
-              <li
-                key={video.id.videoId}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  padding: '10px',
-                  textAlign: 'left',
-                }}
-              >
+              <li className="youtube-result" key={video.id.videoId}>
                 {thumbnail && (
                   <img
                     src={thumbnail}
                     alt=""
                     width="120"
                     height="90"
-                    style={{ objectFit: 'cover', borderRadius: '4px' }}
                   />
                 )}
-                <div style={{ flex: 1 }}>
+                <div className="youtube-result-copy">
                   <strong>{video.snippet.title}</strong>
                   <p>{video.snippet.channelTitle}</p>
                 </div>

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { TrackNode } from "../core/TrackNode";
 
 interface PlayerControlsProps{
@@ -92,11 +92,15 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     if (!currentTrack){
         return(
-            <div style = {{border: '1px solid #css', padding: '15px', borderRadius: '8px', marginBottom: '20px'}}>
-               <h2>Reproductor</h2>
-               <p><i>No hay ninguna canción en reproducción.</i></p>
-
-            </div>
+            <section className="player-panel player-empty" aria-labelledby="player-title">
+               <p className="eyebrow">AHORA</p>
+               <h2 id="player-title">Reproductor</h2>
+               <div className="player-placeholder" role="status">
+                   <span className="placeholder-play" aria-hidden="true">▶</span>
+                   <strong>Elige una pista para empezar</strong>
+                   <p>Tu selección aparecerá aquí.</p>
+               </div>
+            </section>
         );
     }
 
@@ -104,11 +108,15 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     const youtubeVideoId = song.getYoutubeVideoId();
 
     return (
-        <div style={{border: '2px solid #4CAF50', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-            <h2>Reproductor</h2>
-            <h3>{song.getTitle()} - {song.getArtist()}</h3>
+        <section className="player-panel" aria-labelledby="player-title">
+            <p className="eyebrow">AHORA</p>
+            <h2 id="player-title">Reproductor</h2>
+            <div className="now-playing-copy">
+                <h3>{song.getTitle()}</h3>
+                <p>{song.getArtist()}</p>
+            </div>
             {youtubeVideoId ? (
-                <div style={{ width: '100%', maxWidth: '560px', margin: '0 auto' }}>
+                <div className="video-frame">
                     <iframe
                         key={youtubeVideoId}
                         width="560"
@@ -118,28 +126,27 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         allow="autoplay; encrypted-media; picture-in-picture"
                         referrerPolicy="strict-origin-when-cross-origin"
                         allowFullScreen
-                        style={{ width: '100%', aspectRatio: '16 / 9', height: 'auto', border: 0 }}
                     />
-                    <p>Usa los controles oficiales de YouTube para reproducir o pausar.</p>
+                    <p className="player-note">Usa los controles oficiales de YouTube para reproducir o pausar.</p>
                 </div>
             ) : (
-                <p>Duración: {song.getDuration()} segundos</p>
+                <p className="player-note">Duración: {song.getDuration()} segundos</p>
             )}
 
-            <div style={{display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <button onClick={onPrevious}>Anterior</button>
+            <div className="player-actions">
+                <button className="secondary-button" onClick={onPrevious} aria-label="Canción anterior">Anterior</button>
 
                 {!youtubeVideoId && (
                     <button
                         onClick = {togglePlayPause}
-                        style={{ backgroundColor: isPlaying ? '#ff9800' : '#4CAF50', color: 'white', fontWeight: 'bold' }}
+                        className="primary-button"
                     >
                         {isPlaying ? '⏸ Pausa' : '▶ Reproducir'}
                     </button>
                 )}
 
-                <button onClick={onNext}>Siguiente</button>
+                <button className="secondary-button" onClick={onNext} aria-label="Canción siguiente">Siguiente</button>
             </div>
-        </div>
+        </section>
     );
 };
