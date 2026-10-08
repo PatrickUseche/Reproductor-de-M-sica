@@ -1,6 +1,7 @@
 export interface YouTubePlayer {
   destroy: () => void;
   getIframe: () => HTMLIFrameElement;
+  pauseVideo: () => void;
   playVideo: () => void;
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
 }
@@ -13,6 +14,8 @@ export interface YouTubePlayerEvent {
 export interface YouTubeIframeApi {
   PlayerState: {
     ENDED: number;
+    PAUSED: number;
+    PLAYING: number;
   };
   Player: new (
     element: HTMLElement,

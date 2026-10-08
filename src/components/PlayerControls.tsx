@@ -65,6 +65,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     const repeatModeRef = useRef(repeatMode);
     const shuffleEnabledRef = useRef(shuffleEnabled);
     const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
+    const youtubePlayerRef = useRef<YouTubePlayer | null>(null);
     const isPlayingRef = useRef(isPlaying);
     const onNextRef = useRef(onNext);
     const [youtubePlayerError, setYoutubePlayerError] = useState<{ trackId: string; message: string } | null>(null);
@@ -219,7 +220,16 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         target.getIframe().title = `Reproduciendo ${trackTitle}`;
                     },
                     onStateChange: ({ data }) => {
+                        if (data === api.PlayerState.PLAYING) {
+                            setIsPlaying(true);
+                            return;
+                        }
+                        if (data === api.PlayerState.PAUSED) {
+                            setIsPlaying(false);
+                            return;
+                        }
                         if (data !== api.PlayerState.ENDED) return;
+                        setIsPlaying(false);
                         const mode = repeatModeRef.current;
                         if (mode === 'track') {
                             player?.seekTo(0, true);
@@ -244,6 +254,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     },
                 },
             });
+            youtubePlayerRef.current = player;
         }).catch((error: unknown) => {
             if (cancelled) return;
             setYoutubePlayerError({
@@ -255,20 +266,32 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         return () => {
             cancelled = true;
             player?.destroy();
+            if (youtubePlayerRef.current === player) youtubePlayerRef.current = null;
             container.replaceChildren();
         };
     }, [currentTrack, currentTrackId, youtubeVideoId]);
 
     const togglePlayPause = () => {
-        if (!audioRef.current || !currentTrack) return;
+        if (!currentTrack) return;
 
         if (isPlaying) {
-            audioRef.current.pause();
+            if (youtubeVideoId) {
+                youtubePlayerRef.current?.pauseVideo();
+            } else {
+                audioRef.current?.pause();
+            }
             setIsPlaying(false);
+        } else if (youtubeVideoId) {
+            youtubePlayerRef.current?.playVideo();
         } else {
-            audioRef.current.play()
+            const audio = audioRef.current;
+            if (!audio) return;
+            audio.play()
                 .then(() => setIsPlaying(true))
-                .catch((err) => console.error('Error al iniciar reproduccion:', err));
+                .catch((error: unknown) => {
+                    console.error('Error al iniciar reproduccion:', error);
+                    setIsPlaying(false);
+                });
         }
     };
 
@@ -359,28 +382,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
             <div className="player-actions">
                 <button
-                    className="icon-button navigation-button"
-                    type="button"
-                    onClick={() => onPrevious(shuffleEnabled)}
-                    aria-label="Canción anterior"
-                    title="Canción anterior"
-                >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M6 5v14M19 6l-10 6 10 6V6Z" />
-                    </svg>
-                </button>
-
-                {!youtubeVideoId && (
-                    <button
-                        onClick={togglePlayPause}
-                        className="primary-button"
-                        type="button"
-                    >
-                        {isPlaying ? '⏸ Pausa' : '▶ Reproducir'}
-                    </button>
-                )}
-
-                <button
                     className={`icon-button mode-button${repeatMode !== 'off' ? ' is-active' : ''}`}
                     type="button"
                     onClick={() => {
@@ -398,16 +399,25 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 </button>
 
                 <button
-                    className={`icon-button mode-button${shuffleEnabled ? ' is-active' : ''}`}
+                    className="icon-button navigation-button"
                     type="button"
-                    onClick={onToggleShuffle}
-                    aria-pressed={shuffleEnabled}
-                    aria-label={shuffleEnabled ? 'Desactivar reproducción aleatoria' : 'Activar reproducción aleatoria'}
-                    title={shuffleEnabled ? 'Aleatorio activado' : 'Aleatorio desactivado'}
+                    onClick={() => onPrevious(shuffleEnabled)}
+                    aria-label="Canción anterior"
+                    title="Canción anterior"
                 >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+                        <path d="M6 5v14M19 6l-10 6 10 6V6Z" />
                     </svg>
+                </button>
+
+                <button
+                    onClick={togglePlayPause}
+                    className="primary-button player-play-button"
+                    type="button"
+                    aria-label={isPlaying ? 'Pausar reproducción' : 'Reproducir canción seleccionada'}
+                    title={isPlaying ? 'Pausar' : 'Reproducir'}
+                >
+                    {isPlaying ? '⏸' : '▶'}
                 </button>
 
                 <button
@@ -419,6 +429,19 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M18 5v14M5 6l10 6-10 6V6Z" />
+                    </svg>
+                </button>
+
+                <button
+                    className={`icon-button mode-button${shuffleEnabled ? ' is-active' : ''}`}
+                    type="button"
+                    onClick={onToggleShuffle}
+                    aria-pressed={shuffleEnabled}
+                    aria-label={shuffleEnabled ? 'Desactivar reproducción aleatoria' : 'Activar reproducción aleatoria'}
+                    title={shuffleEnabled ? 'Aleatorio activado' : 'Aleatorio desactivado'}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
                     </svg>
                 </button>
             </div>
