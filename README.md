@@ -48,7 +48,7 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 
 ## Uso
 
-- **Tema:** la aplicación abre por defecto en modo oscuro con tonos carbón y dorados. Usa el botón de sol/luna del encabezado para alternar entre modo claro y oscuro; la preferencia se guarda en el navegador.
+- **Tema y cuenta:** la aplicación abre por defecto en modo oscuro con tonos carbón y dorados. Abre el menú desde el perfil para cambiar de tema, revisar el estado de sincronización o cerrar sesión; también se abre al pasar el cursor por el perfil. La preferencia de tema se guarda en el navegador.
 - **Audio local:** usa el botón **Añadir canción local** junto al perfil o arrastra archivos sobre él. Se agregan al final sin iniciar la reproducción; el título se toma del nombre del archivo. Se muestra el avance de importación y los errores por archivo. El audio y sus metadatos se guardan en IndexedDB para restaurarlos al volver a abrir la aplicación en el mismo navegador y con la misma cuenta.
 - **Controles de audio:** usa el deslizador de posición en audio local y videos de YouTube; el volumen se despliega al pasar el cursor sobre el icono de altavoz y un clic en el icono silencia o restaura el sonido. El volumen y la posición de cada pista se recuerdan en este navegador. Los videos de YouTube también conservan sus controles oficiales; puedes ocultar el video y el audio seguirá reproduciéndose. La preferencia visual se recuerda en el navegador.
 - **Atajos del reproductor:** Espacio reproduce o pausa, ← selecciona la pista anterior y → la siguiente. Los atajos no se activan mientras escribes o usas un control interactivo.

@@ -145,6 +145,9 @@ export default function App() {
   const [localAudioError, setLocalAudioError] = useState('');
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [colorTheme, setColorTheme] = useState<ColorTheme>(loadColorTheme);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const suppressProfileFocusOpenRef = useRef(false);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveRevision = useRef(0);
   const playlistDirtyRef = useRef(false);
@@ -197,6 +200,29 @@ export default function App() {
       console.error('No se pudo guardar la preferencia de tema:', error);
     }
   }, [colorTheme]);
+
+  useEffect(() => {
+    const closeMenuOnOutsideClick = (event: PointerEvent) => {
+      if (event.target instanceof Node && !profileMenuRef.current?.contains(event.target)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    const closeMenuOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !isProfileMenuOpen) return;
+      setIsProfileMenuOpen(false);
+      suppressProfileFocusOpenRef.current = true;
+      profileMenuRef.current?.querySelector('button')?.focus();
+      queueMicrotask(() => {
+        suppressProfileFocusOpenRef.current = false;
+      });
+    };
+    window.addEventListener('pointerdown', closeMenuOnOutsideClick);
+    window.addEventListener('keydown', closeMenuOnEscape);
+    return () => {
+      window.removeEventListener('pointerdown', closeMenuOnOutsideClick);
+      window.removeEventListener('keydown', closeMenuOnEscape);
+    };
+  }, [isProfileMenuOpen]);
 
   useEffect(() => {
     if (session) return;
@@ -378,7 +404,10 @@ export default function App() {
               <h1>Reproductor de Música</h1>
               <p className="app-description">Inicia sesión para acceder a tu playlist personal.</p>
             </div>
-            <ThemeToggle theme={colorTheme} onToggle={toggleColorTheme} />
+            <div className="profile-menu-theme">
+              <span>Tema {colorTheme === 'dark' ? 'oscuro' : 'claro'}</span>
+              <ThemeToggle theme={colorTheme} onToggle={toggleColorTheme} />
+            </div>
           </div>
         </header>
         <AccountAccess client={supabase} />
@@ -551,27 +580,63 @@ export default function App() {
             <p className="app-description">Organiza tu lista y elige qué escuchar.</p>
           </div>
           <div className="account-actions">
-            <ThemeToggle theme={colorTheme} onToggle={toggleColorTheme} />
-            <div className="account-status">
-              <div className="profile-identity">
+            <div
+              className={`profile-menu${isProfileMenuOpen ? ' is-open' : ''}`}
+              ref={profileMenuRef}
+              onMouseEnter={() => setIsProfileMenuOpen(true)}
+              onMouseLeave={(event) => {
+                if (!event.currentTarget.contains(document.activeElement)) setIsProfileMenuOpen(false);
+              }}
+              onFocusCapture={() => {
+                if (!suppressProfileFocusOpenRef.current) setIsProfileMenuOpen(true);
+              }}
+              onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setIsProfileMenuOpen(false);
+              }}
+            >
+              <button
+                className="profile-menu-trigger"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded={isProfileMenuOpen}
+                aria-label={`Perfil de ${displayName}`}
+                onClick={() => setIsProfileMenuOpen(true)}
+              >
                 <ProfileAvatar key={avatarUrl ?? 'fallback'} avatarUrl={avatarUrl} displayName={displayName} />
                 <span>{displayName}</span>
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="m5 7 5 5 5-5" />
+                </svg>
+              </button>
+              <div className="profile-menu-popover" aria-label="Opciones de perfil">
+                <div className="profile-menu-sync">
+                  <span
+                    className={`sync-indicator${syncStatus === 'error' || realtimeStatus === 'disconnected' ? ' is-warning' : ''}${syncStatus === 'saving' ? ' is-saving' : ''}`}
+                    role="status"
+                    aria-label={syncIndicatorLabel}
+                    title={syncIndicatorLabel}
+                  >
+                    {syncIndicatorIcon}
+                  </span>
+                  <span>{syncIndicatorLabel}</span>
+                </div>
+                {syncError && <p className="sync-error" role="alert">{syncError}</p>}
+                {syncStatus === 'error' && (
+                  <button className="profile-menu-action" type="button" onClick={() => setPlaylistDirty(true)}>
+                    Reintentar guardado
+                  </button>
+                )}
+                <ThemeToggle theme={colorTheme} onToggle={toggleColorTheme} />
+                <button
+                  className="profile-menu-action"
+                  type="button"
+                  onClick={() => { void supabase?.auth.signOut(); }}
+                >
+                  Cerrar sesión
+                </button>
               </div>
-              <span
-                className={`sync-indicator${syncStatus === 'error' || realtimeStatus === 'disconnected' ? ' is-warning' : ''}${syncStatus === 'saving' ? ' is-saving' : ''}`}
-                role="status"
-                aria-label={syncIndicatorLabel}
-                title={syncIndicatorLabel}
-              >
-                {syncIndicatorIcon}
-              </span>
-              {syncError && <p className="sync-error" role="alert">{syncError}</p>}
             </div>
             <SongForm onAddFiles={handleAddLocalFiles} />
-            {syncStatus === 'error' && (
-              <button className="secondary-button" type="button" onClick={() => setPlaylistDirty(true)}>Reintentar guardado</button>
-            )}
-            <button className="secondary-button" type="button" onClick={() => { void supabase?.auth.signOut(); }}>Cerrar sesión</button>
           </div>
         </div>
       </header>
