@@ -14,6 +14,7 @@ import {
     subscribeToPlaylist,
     type PlaylistSnapshot,
 } from './services/playlistPersistence';
+import { deleteLocalAudio, loadLocalAudio, saveLocalAudio } from './services/localAudioPersistence';
 import { supabase } from './services/supabase';
 import type { YouTubeVideo } from './services/youtube';
 import { Song } from './types/Song';
@@ -67,6 +68,7 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [syncError, setSyncError] = useState('');
+  const [localAudioError, setLocalAudioError] = useState('');
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveRevision = useRef(0);
   const playlistDirtyRef = useRef(false);
@@ -131,14 +133,27 @@ export default function App() {
     if (!userId) return;
 
     let active = true;
+    let loadedLocalSongs: Song[] = [];
+    for (const node of playlist.toArray()) {
+      const audioUrl = node.content.getAudioUrl();
+      if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+    }
     playlist.replaceAll([]);
 
-    void loadPlaylist(userId).then((snapshot) => {
-      if (!active) return;
+    void (async () => {
+      const snapshot = await loadPlaylist(userId);
+      loadedLocalSongs = await loadLocalAudio(userId);
+      if (!active) {
+        loadedLocalSongs.forEach((song) => URL.revokeObjectURL(song.getAudioUrl()));
+        return;
+      }
       restorePlaylist(playlist, snapshot ?? { songs: [], currentSongId: null });
+      for (const song of loadedLocalSongs) playlist.insertAtEnd(song);
       setLoadedUserId(userId);
       setSyncStatus('saved');
-    }).catch((error: unknown) => {
+      setLocalAudioError('');
+    })().catch((error: unknown) => {
+      loadedLocalSongs.forEach((song) => URL.revokeObjectURL(song.getAudioUrl()));
       if (!active) return;
       setLoadError(error instanceof Error ? error.message : 'No se pudo cargar la playlist.');
       setSyncStatus('error');
@@ -146,6 +161,7 @@ export default function App() {
 
     return () => {
       active = false;
+      loadedLocalSongs.forEach((song) => URL.revokeObjectURL(song.getAudioUrl()));
     };
   }, [userId, loadAttempt, playlist]);
 
@@ -332,10 +348,27 @@ export default function App() {
           onSelectSong={handleSelectSong}
           onDeleteSong={(position) => {
             const song = playlist.toArray()[position]?.content;
-            if (!playlist.deleteAtPosition(position)) return;
-            const audioUrl = song?.getAudioUrl();
-            if (audioUrl?.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
-            refresh();
+            if (!song) return;
+
+            const audioUrl = song.getAudioUrl();
+            const finishDeletion = () => {
+              const currentPosition = playlist.toArray()
+                .findIndex((node) => node.content.getId() === song.getId());
+              if (currentPosition < 0 || !playlist.deleteAtPosition(currentPosition)) return;
+              if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+              refresh();
+            };
+
+            if (audioUrl.startsWith('blob:')) {
+              void deleteLocalAudio(session.user.id, song.getId()).then(() => {
+                setLocalAudioError('');
+                finishDeletion();
+              }).catch((error: unknown) => {
+                setLocalAudioError(error instanceof Error ? error.message : 'No se pudo eliminar el archivo local.');
+              });
+            } else {
+              finishDeletion();
+            }
           }}
           onMoveSong={(position, direction) => {
             if (playlist.moveAtPosition(position, direction)) refresh();
@@ -366,13 +399,25 @@ export default function App() {
               return new Song(crypto.randomUUID(), title, 'Archivo local', duration, audioUrl);
             }));
 
+            try {
+              await saveLocalAudio(session.user.id, songs.map((song, index) => ({
+                song,
+                file: files[index],
+              })));
+            } catch (error) {
+              songs.forEach((song) => URL.revokeObjectURL(song.getAudioUrl()));
+              throw error;
+            }
+
             songs.forEach((song) => playlist.insertAtEnd(song));
+            setLocalAudioError('');
             refresh();
           }}
         />
 
         <YouTubeSearch onAddSong={handleAddYouTubeSong} />
       </section>
+      {localAudioError && <p className="form-error" role="alert">{localAudioError}</p>}
     </main>
   );
 }

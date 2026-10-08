@@ -48,11 +48,11 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 
 ## Uso
 
-- **Audio local:** arrastra archivos de audio al área de carga. Se agregan al final sin iniciar la reproducción; el título se toma del nombre del archivo.
+- **Audio local:** arrastra archivos de audio al área de carga. Se agregan al final sin iniciar la reproducción; el título se toma del nombre del archivo. El audio y sus metadatos se guardan en IndexedDB para restaurarlos al volver a abrir la aplicación en el mismo navegador y con la misma cuenta.
 - **Búsqueda de YouTube:** escribe un título o artista y pulsa **Buscar**. Selecciona **Añadir y reproducir** para incorporar el resultado y mostrarlo en el reproductor oficial incrustado.
 - **Lista:** selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista.
 - **Cuenta:** crea una cuenta o inicia sesión para cargar y guardar la playlist personal en Supabase. El orden y la canción seleccionada se restauran al volver a iniciar sesión y los cambios se sincronizan en vivo entre sesiones abiertas.
-- Los archivos arrastrados se reproducen solo durante la sesión actual del navegador y no se suben a Supabase; no estarán disponibles después de cerrar o recargar la pestaña ni en otros dispositivos. Las pistas de YouTube y URLs persistentes siguen sincronizándose con la cuenta.
+- Los archivos arrastrados se guardan solo en IndexedDB del navegador actual: no se suben a Supabase ni están disponibles en otros dispositivos o navegadores. Al restaurar la aplicación, se añaden después de las pistas sincronizadas con Supabase. Borrar los datos del sitio o del navegador puede eliminarlos.
 - Los controles de YouTube son los que proporciona el propio reproductor. No todos los videos permiten reproducción incrustada; también pueden aplicar restricciones regionales, de edad o del propietario.
 
 ## Estructura del código
@@ -71,6 +71,7 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 | `src/services/youtube.ts` | Solicitud a YouTube Data API v3 y manejo de respuesta. |
 | `src/services/supabase.ts` | Configuración del cliente Supabase desde variables de entorno. |
 | `src/services/playlistPersistence.ts` | Conversión y persistencia remota de playlists. |
+| `src/services/localAudioPersistence.ts` | Almacenamiento de audio local por cuenta en IndexedDB. |
 | `src/services/youtubeIframeApi.ts` | Carga de la API oficial de YouTube IFrame Player. |
 | `supabase/schema.sql` | Tabla de playlists y políticas RLS por usuario. |
 | `supabase/realtime.sql` | Habilita notificaciones en vivo para la tabla de playlists. |
