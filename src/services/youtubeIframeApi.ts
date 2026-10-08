@@ -1,8 +1,11 @@
 export interface YouTubePlayer {
   destroy: () => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
   getIframe: () => HTMLIFrameElement;
   pauseVideo: () => void;
   playVideo: () => void;
+  setVolume: (volume: number) => void;
   seekTo: (seconds: number, allowSeekAhead: boolean) => void;
 }
 
