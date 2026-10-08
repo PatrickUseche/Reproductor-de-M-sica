@@ -3,10 +3,11 @@ import { searchYouTubeSongs, type YouTubeVideo } from '../services/youtube';
 
 interface YouTubeSearchProps {
   onAddSong: (video: YouTubeVideo) => void;
+  onPlaySong: (video: YouTubeVideo) => void;
 }
 
 /** Busca videos musicales y permite agregarlos a la playlist. */
-export function YouTubeSearch({ onAddSong }: YouTubeSearchProps) {
+export function YouTubeSearch({ onAddSong, onPlaySong }: YouTubeSearchProps) {
   const [query, setQuery] = useState('');
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,18 +69,25 @@ export function YouTubeSearch({ onAddSong }: YouTubeSearchProps) {
 
             return (
               <li className="youtube-result" key={video.id.videoId}>
-                {thumbnail && (
-                  <img
-                    src={thumbnail}
-                    alt=""
-                    width="120"
-                    height="90"
-                  />
-                )}
-                <div className="youtube-result-copy">
-                  <strong>{video.snippet.title}</strong>
-                  <p>{video.snippet.channelTitle}</p>
-                </div>
+                <button
+                  className="youtube-result-play"
+                  type="button"
+                  onClick={() => onPlaySong(video)}
+                  aria-label={`Añadir y reproducir ${video.snippet.title} de ${video.snippet.channelTitle}`}
+                >
+                  {thumbnail && (
+                    <img
+                      src={thumbnail}
+                      alt=""
+                      width="120"
+                      height="90"
+                    />
+                  )}
+                  <span className="youtube-result-copy">
+                    <strong>{video.snippet.title}</strong>
+                    <span>{video.snippet.channelTitle}</span>
+                  </span>
+                </button>
                 <button type="button" onClick={() => onAddSong(video)}>
                   Añadir a la lista
                 </button>

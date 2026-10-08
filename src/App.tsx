@@ -294,6 +294,30 @@ export default function App() {
     refresh();
   };
 
+  const handlePlayYouTubeSong = (video: YouTubeVideo) => {
+    const existingNode = playlist.toArray().find((node) =>
+      node.content.getSource() === 'youtube'
+      && node.content.getAudioUrl() === video.id.videoId,
+    );
+
+    if (existingNode) {
+      playlist.setCurrentNode(existingNode);
+    } else {
+      const song = new Song(
+        crypto.randomUUID(),
+        video.snippet.title,
+        video.snippet.channelTitle,
+        0,
+        video.id.videoId,
+        'youtube',
+      );
+      playlist.insertAtEnd(song);
+      playlist.setCurrentNode(playlist.getTail());
+    }
+
+    refresh();
+  };
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -422,7 +446,7 @@ export default function App() {
           }}
         />
 
-        <YouTubeSearch onAddSong={handleAddYouTubeSong} />
+        <YouTubeSearch onAddSong={handleAddYouTubeSong} onPlaySong={handlePlayYouTubeSong} />
       </section>
       {localAudioError && <p className="form-error" role="alert">{localAudioError}</p>}
     </main>

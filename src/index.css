@@ -615,6 +615,22 @@ input::placeholder {
   background: #fff;
 }
 
+.youtube-result-play {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  border-color: transparent;
+  padding: 0;
+  text-align: left;
+  background: transparent;
+}
+
+.youtube-result-play:hover:not(:disabled) {
+  background: transparent;
+}
+
 .youtube-result img {
   flex: 0 0 88px;
   width: 88px;
@@ -624,12 +640,14 @@ input::placeholder {
 }
 
 .youtube-result-copy {
+  display: grid;
   flex: 1 1 auto;
   min-width: 0;
+  gap: 4px;
 }
 
 .youtube-result-copy strong,
-.youtube-result-copy p {
+.youtube-result-copy span {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
@@ -642,8 +660,7 @@ input::placeholder {
   line-height: 1.35;
 }
 
-.youtube-result-copy p {
-  margin-top: 4px;
+.youtube-result-copy span {
   color: var(--muted);
   font-size: 12px;
 }
