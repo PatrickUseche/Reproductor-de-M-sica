@@ -194,6 +194,48 @@ input::placeholder {
   font-size: 13px;
 }
 
+.audio-controls {
+  display: grid;
+  gap: 18px;
+  margin: 8px 0 0;
+}
+
+.audio-progress,
+.audio-volume {
+  display: grid;
+  gap: 7px;
+}
+
+.audio-progress input,
+.audio-volume input {
+  width: 100%;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+
+.audio-progress input:disabled {
+  cursor: not-allowed;
+}
+
+.audio-time {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-volume {
+  grid-template-columns: auto minmax(100px, 180px);
+  align-items: center;
+  justify-content: end;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .player-actions {
   display: flex;
   flex-wrap: wrap;

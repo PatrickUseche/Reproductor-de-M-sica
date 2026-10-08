@@ -49,6 +49,7 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 ## Uso
 
 - **Audio local:** arrastra archivos de audio al área de carga. Se agregan al final sin iniciar la reproducción; el título se toma del nombre del archivo. El audio y sus metadatos se guardan en IndexedDB para restaurarlos al volver a abrir la aplicación en el mismo navegador y con la misma cuenta.
+- **Controles de audio:** las pistas de audio directo incluyen control de reproducción, posición y volumen. Los videos de YouTube mantienen los controles oficiales del reproductor incrustado.
 - **Búsqueda de YouTube:** escribe un título o artista y pulsa **Buscar**. Selecciona **Añadir y reproducir** para incorporar el resultado y mostrarlo en el reproductor oficial incrustado.
 - **Lista:** selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista.
 - **Cuenta:** crea una cuenta o inicia sesión para cargar y guardar la playlist personal en Supabase. El orden y la canción seleccionada se restauran al volver a iniciar sesión y los cambios se sincronizan en vivo entre sesiones abiertas.

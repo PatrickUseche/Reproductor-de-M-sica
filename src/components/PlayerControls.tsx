@@ -19,12 +19,17 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 }) => {
     // Estado para la interfaz (Play / Pausa).
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(1);
     const currentTrackId = currentTrack?.content.getId() ?? null;
     const youtubeVideoId = currentTrack?.content.getYoutubeVideoId() ?? null;
     const [previousTrackId, setPreviousTrackId] = useState(currentTrackId);
 
     if (currentTrackId !== previousTrackId) {
         setPreviousTrackId(currentTrackId);
+        setCurrentTime(0);
+        setDuration(0);
         if (!currentTrack || currentTrack.content.getSource() === 'youtube') {
             setIsPlaying(false);
         }
@@ -32,6 +37,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     // Referencia para mantener una unica instancia del objeto Audio.
     const audioRef = useRef<HTMLAudioElement | null >(null);
+    const volumeRef = useRef(volume);
     const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
     const isPlayingRef = useRef(isPlaying);
     const onNextRef = useRef(onNext);
@@ -41,6 +47,11 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         isPlayingRef.current = isPlaying;
         onNextRef.current = onNext;
     }, [isPlaying, onNext]);
+
+    useEffect(() => {
+        volumeRef.current = volume;
+        if (audioRef.current) audioRef.current.volume = volume;
+    }, [volume]);
 
     // EFECTO: Se ejecuta cada vez que cambia la cancion seleccionada (_current).
     useEffect(() => {
@@ -64,11 +75,23 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         }
 
         const newAudio = new Audio(song.getAudioUrl());
+        newAudio.volume = volumeRef.current;
         audioRef.current = newAudio;
 
+        const updateDuration = () => {
+            const mediaDuration = newAudio.duration;
+            setDuration(Number.isFinite(mediaDuration) ? mediaDuration : song.getDuration());
+        };
+        newAudio.ontimeupdate = () => setCurrentTime(newAudio.currentTime);
+        newAudio.onloadedmetadata = updateDuration;
+        newAudio.ondurationchange = updateDuration;
+        newAudio.onplay = () => setIsPlaying(true);
+        newAudio.onpause = () => setIsPlaying(false);
         newAudio.onended = () => {
+            setCurrentTime(Number.isFinite(newAudio.duration) ? newAudio.duration : 0);
             setIsPlaying(onNextRef.current());
         };
+        updateDuration();
 
         if (isPlayingRef.current) {
             newAudio.play().catch((err) => console.log('Error al reproducir el audio:', err));
@@ -77,6 +100,12 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
         return () => {
             newAudio.pause();
+            newAudio.ontimeupdate = null;
+            newAudio.onloadedmetadata = null;
+            newAudio.ondurationchange = null;
+            newAudio.onplay = null;
+            newAudio.onpause = null;
+            newAudio.onended = null;
         };
     }, [currentTrack]);
 
@@ -150,6 +179,18 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         }
     };
 
+    const formatTime = (time: number) => {
+        if (!Number.isFinite(time) || time < 0) return '0:00';
+        const totalSeconds = Math.floor(time);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        return hours > 0
+            ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+            : `${minutes}:${String(seconds).padStart(2, '0')}`;
+    };
+
     if (!currentTrack){
         return(
             <section className="player-panel player-empty" aria-labelledby="player-title">
@@ -183,7 +224,40 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     </p>
                 </div>
             ) : (
-                <p className="player-note">Duración: {song.getDuration()} segundos</p>
+                <div className="audio-controls">
+                    <div className="audio-progress">
+                        <input
+                            type="range"
+                            min="0"
+                            max={duration || 0}
+                            step="0.1"
+                            value={Math.min(currentTime, duration || 0)}
+                            disabled={!duration}
+                            aria-label="Posición de reproducción"
+                            onChange={(event) => {
+                                const nextTime = Number(event.target.value);
+                                if (audioRef.current) audioRef.current.currentTime = nextTime;
+                                setCurrentTime(nextTime);
+                            }}
+                        />
+                        <div className="audio-time" aria-live="off">
+                            <span>{formatTime(currentTime)}</span>
+                            <span>{formatTime(duration || song.getDuration())}</span>
+                        </div>
+                    </div>
+                    <label className="audio-volume">
+                        <span>Volumen</span>
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={volume}
+                            aria-label="Volumen"
+                            onChange={(event) => setVolume(Number(event.target.value))}
+                        />
+                    </label>
+                </div>
             )}
 
             <div className="player-actions">
