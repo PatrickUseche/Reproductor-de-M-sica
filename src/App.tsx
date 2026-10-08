@@ -89,6 +89,43 @@ function ProfileAvatar({ avatarUrl, displayName }: { avatarUrl: string | null; d
   );
 }
 
+type ColorTheme = 'light' | 'dark';
+const colorThemeStorageKey = 'music-player-color-theme';
+
+function loadColorTheme(): ColorTheme {
+  try {
+    return window.localStorage.getItem(colorThemeStorageKey) === 'light' ? 'light' : 'dark';
+  } catch (error) {
+    console.error('No se pudo leer la preferencia de tema:', error);
+    return 'light';
+  }
+}
+
+function ThemeToggle({ theme, onToggle }: { theme: ColorTheme; onToggle: () => void }) {
+  const nextThemeLabel = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+
+  return (
+    <button
+      className="theme-toggle"
+      type="button"
+      onClick={onToggle}
+      aria-label={nextThemeLabel}
+      title={nextThemeLabel}
+    >
+      {theme === 'dark' ? (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 /**
  * Ensambla la interfaz y coordina las acciones sobre la playlist mutable.
  * `refresh` sincroniza React después de que una operación cambia los nodos.
@@ -107,6 +144,7 @@ export default function App() {
   const [syncError, setSyncError] = useState('');
   const [localAudioError, setLocalAudioError] = useState('');
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(loadColorTheme);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveRevision = useRef(0);
   const playlistDirtyRef = useRef(false);
@@ -142,11 +180,23 @@ export default function App() {
       shuffleHistoryRef.current = [];
     }
   };
+  const toggleColorTheme = () => {
+    setColorTheme((theme) => theme === 'light' ? 'dark' : 'light');
+  };
 
   useEffect(() => {
     playlistDirtyRef.current = playlistDirty;
     syncStatusRef.current = syncStatus;
   }, [playlistDirty, syncStatus]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = colorTheme;
+    try {
+      window.localStorage.setItem(colorThemeStorageKey, colorTheme);
+    } catch (error) {
+      console.error('No se pudo guardar la preferencia de tema:', error);
+    }
+  }, [colorTheme]);
 
   useEffect(() => {
     if (session) return;
@@ -298,8 +348,13 @@ export default function App() {
     return (
       <main className="app-shell">
         <header className="app-header">
-          <p className="eyebrow">TU ESPACIO DE AUDIO</p>
-          <h1>Reproductor de Música</h1>
+          <div className="app-header-content">
+            <div>
+              <p className="eyebrow">TU ESPACIO DE AUDIO</p>
+              <h1>Reproductor de Música</h1>
+            </div>
+            <ThemeToggle theme={colorTheme} onToggle={toggleColorTheme} />
+          </div>
         </header>
         <section className="loading-panel" role="alert">
           <h2>Falta configurar la sincronización</h2>
@@ -317,9 +372,14 @@ export default function App() {
     return (
       <main className="app-shell">
         <header className="app-header">
-          <p className="eyebrow">TU ESPACIO DE AUDIO</p>
-          <h1>Reproductor de Música</h1>
-          <p className="app-description">Inicia sesión para acceder a tu playlist personal.</p>
+          <div className="app-header-content">
+            <div>
+              <p className="eyebrow">TU ESPACIO DE AUDIO</p>
+              <h1>Reproductor de Música</h1>
+              <p className="app-description">Inicia sesión para acceder a tu playlist personal.</p>
+            </div>
+            <ThemeToggle theme={colorTheme} onToggle={toggleColorTheme} />
+          </div>
         </header>
         <AccountAccess client={supabase} />
       </main>
@@ -491,6 +551,7 @@ export default function App() {
             <p className="app-description">Organiza tu lista y elige qué escuchar.</p>
           </div>
           <div className="account-actions">
+            <ThemeToggle theme={colorTheme} onToggle={toggleColorTheme} />
             <div className="account-status">
               <div className="profile-identity">
                 <ProfileAvatar key={avatarUrl ?? 'fallback'} avatarUrl={avatarUrl} displayName={displayName} />

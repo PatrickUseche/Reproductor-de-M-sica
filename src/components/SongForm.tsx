@@ -104,7 +104,7 @@ export function SongForm({ onAddFiles }: SongFormProps) {
           <path d="M11 2v11.1a3.2 3.2 0 1 1-2-3V5l8-2v10.1a3.2 3.2 0 1 1-2-3V2.5L11 4v-2Z" />
           <path d="M3 6h3M4.5 4.5v3" />
         </svg>
-        <span>{isProcessing ? 'Importando' : 'Audio'}</span>
+        <span>{isProcessing ? 'Importando' : 'Añadir canción local'}</span>
       </button>
       <input
         ref={fileInputRef}
