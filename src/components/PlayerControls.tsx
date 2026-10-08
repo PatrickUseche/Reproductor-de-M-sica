@@ -21,8 +21,11 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 }) => {
     // Estado para la interfaz (Play / Pausa).
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
+    const [playbackProgress, setPlaybackProgress] = useState<{
+        trackId: string | null;
+        currentTime: number;
+        duration: number;
+    }>({ trackId: null, currentTime: 0, duration: 0 });
     const [volume, setVolume] = useState(1);
     const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
     const currentTrackId = currentTrack?.content.getId() ?? null;
@@ -31,13 +34,19 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     if (currentTrackId !== previousTrackId) {
         setPreviousTrackId(currentTrackId);
-        setCurrentTime(0);
-        const trackDuration = currentTrack?.content.getDuration() ?? 0;
-        setDuration(Number.isFinite(trackDuration) && trackDuration > 0 ? trackDuration : 0);
         if (!currentTrack || currentTrack.content.getSource() === 'youtube') {
             setIsPlaying(false);
         }
     }
+    const savedDuration = currentTrack?.content.getDuration() ?? 0;
+    const currentTime = playbackProgress.trackId === currentTrackId
+        ? playbackProgress.currentTime
+        : 0;
+    const duration = playbackProgress.trackId === currentTrackId && playbackProgress.duration > 0
+        ? playbackProgress.duration
+        : Number.isFinite(savedDuration) && savedDuration > 0
+            ? savedDuration
+            : 0;
 
     // Referencia para mantener una unica instancia del objeto Audio.
     const audioRef = useRef<HTMLAudioElement | null >(null);
@@ -74,11 +83,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
         const song = currentTrack.content;
 
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current = null;
-        }
-
         if (song.getSource() === 'youtube') {
             return;
         }
@@ -89,19 +93,36 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         audioRef.current = newAudio;
 
         const updateDuration = () => {
+            if (audioRef.current !== newAudio) return;
             const mediaDuration = newAudio.duration;
             const knownDuration = Number.isFinite(mediaDuration) && mediaDuration > 0
                 ? mediaDuration
                 : song.getDuration();
-            setDuration(Number.isFinite(knownDuration) && knownDuration > 0 ? knownDuration : 0);
+            setPlaybackProgress((progress) => ({
+                trackId: song.getId(),
+                currentTime: progress.trackId === song.getId() ? progress.currentTime : 0,
+                duration: Number.isFinite(knownDuration) && knownDuration > 0 ? knownDuration : 0,
+            }));
         };
-        newAudio.ontimeupdate = () => setCurrentTime(newAudio.currentTime);
+        newAudio.ontimeupdate = () => {
+            if (audioRef.current !== newAudio) return;
+            setPlaybackProgress((progress) => ({
+                trackId: song.getId(),
+                currentTime: newAudio.currentTime,
+                duration: progress.trackId === song.getId() ? progress.duration : 0,
+            }));
+        };
         newAudio.onloadedmetadata = updateDuration;
         newAudio.ondurationchange = updateDuration;
         newAudio.oncanplay = updateDuration;
-        newAudio.onplay = () => setIsPlaying(true);
-        newAudio.onpause = () => setIsPlaying(false);
+        newAudio.onplay = () => {
+            if (audioRef.current === newAudio) setIsPlaying(true);
+        };
+        newAudio.onpause = () => {
+            if (audioRef.current === newAudio) setIsPlaying(false);
+        };
         newAudio.onended = () => {
+            if (audioRef.current !== newAudio) return;
             const mode = repeatModeRef.current;
             if (mode === 'track') {
                 newAudio.currentTime = 0;
@@ -111,7 +132,11 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 });
                 return;
             }
-            setCurrentTime(Number.isFinite(newAudio.duration) ? newAudio.duration : 0);
+            setPlaybackProgress((progress) => ({
+                trackId: song.getId(),
+                currentTime: Number.isFinite(newAudio.duration) ? newAudio.duration : progress.currentTime,
+                duration: progress.duration,
+            }));
             const didAdvance = onNextRef.current(mode === 'playlist');
             if (didAdvance) {
                 setIsPlaying(true);
@@ -135,7 +160,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         }
 
         return () => {
-            newAudio.pause();
             newAudio.ontimeupdate = null;
             newAudio.onloadedmetadata = null;
             newAudio.ondurationchange = null;
@@ -143,6 +167,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             newAudio.onplay = null;
             newAudio.onpause = null;
             newAudio.onended = null;
+            if (audioRef.current === newAudio) audioRef.current = null;
+            newAudio.pause();
         };
     }, [currentTrack]);
 
@@ -266,7 +292,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 <p>{song.getArtist()}</p>
             </div>
             {youtubeVideoId ? (
-                <div className="video-frame">
+                <div className="video-frame" key="youtube-player">
                     <div className="youtube-player-host" ref={youtubeContainerRef} />
                     <p className="player-note" role={youtubePlayerError?.trackId === currentTrackId ? 'alert' : undefined}>
                         {youtubePlayerError?.trackId === currentTrackId
@@ -275,7 +301,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     </p>
                 </div>
             ) : (
-                <div className="audio-controls">
+                <div className="audio-controls" key="audio-player">
                     <div className="audio-progress">
                         <input
                             type="range"
@@ -284,14 +310,15 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                             step="0.1"
                             value={duration > 0 ? Math.min(currentTime, duration) : 0}
                             disabled={!duration}
-                            style={{
-                                background: `linear-gradient(to right, var(--teal) ${duration > 0 ? (currentTime / duration) * 100 : 0}%, #dbe3df ${duration > 0 ? (currentTime / duration) * 100 : 0}%)`,
-                            }}
                             aria-label="Posición de reproducción"
                             onChange={(event) => {
                                 const nextTime = Number(event.target.value);
                                 if (audioRef.current) audioRef.current.currentTime = nextTime;
-                                setCurrentTime(nextTime);
+                                setPlaybackProgress({
+                                    trackId: currentTrackId,
+                                    currentTime: nextTime,
+                                    duration,
+                                });
                             }}
                         />
                         <div className="audio-time" aria-live="off">
