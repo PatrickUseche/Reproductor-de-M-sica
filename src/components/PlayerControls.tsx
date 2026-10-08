@@ -4,6 +4,8 @@ import { loadYouTubeIframeApi, type YouTubePlayer } from "../services/youtubeIfr
 
 interface PlayerControlsProps{
     currentTrack: TrackNode | null;
+    canStartPlayback: boolean;
+    onStartPlayback: () => boolean;
     shuffleEnabled: boolean;
     onToggleShuffle: () => void;
     onNext: (repeatPlaylist?: boolean, shuffle?: boolean) => boolean;
@@ -77,6 +79,8 @@ function getYouTubePlaybackErrorMessage(errorCode: number) {
  */
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
     currentTrack,
+    canStartPlayback,
+    onStartPlayback,
     shuffleEnabled,
     onToggleShuffle,
     onNext,
@@ -480,8 +484,54 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                <h2 id="player-title">Reproductor</h2>
                <div className="player-placeholder" role="status">
                    <span className="placeholder-play" aria-hidden="true">▶</span>
-                   <strong>Elige una pista para empezar</strong>
-                   <p>Tu selección aparecerá aquí.</p>
+                   <strong>{canStartPlayback ? 'Tu playlist está lista' : 'Añade canciones para empezar'}</strong>
+                   <p>{canStartPlayback
+                       ? 'Pulsa reproducir para empezar desde la primera canción.'
+                       : 'Las canciones que añadas aparecerán aquí.'}</p>
+                   {canStartPlayback && (
+                       <div className="empty-player-actions">
+                           <button
+                               className="icon-button navigation-button"
+                               type="button"
+                               onClick={() => {
+                                   setIsPlaying(true);
+                                   onPrevious(shuffleEnabled);
+                               }}
+                               aria-label="Iniciar desde la última canción"
+                               title="Iniciar desde la última canción"
+                           >
+                               <svg viewBox="0 0 24 24" aria-hidden="true">
+                                   <path d="M6 5v14M19 6l-10 6 10 6V6Z" />
+                               </svg>
+                           </button>
+                           <button
+                               className="primary-button player-play-button"
+                               type="button"
+                               onClick={() => {
+                                   const didStart = onStartPlayback();
+                                   setIsPlaying(didStart);
+                               }}
+                               aria-label="Reproducir desde la primera canción"
+                               title="Reproducir desde la primera canción"
+                           >
+                               ▶
+                           </button>
+                           <button
+                               className="icon-button navigation-button"
+                               type="button"
+                               onClick={() => {
+                                   const didAdvance = onNext(false, shuffleEnabled);
+                                   setIsPlaying(didAdvance);
+                               }}
+                               aria-label="Iniciar desde la primera canción"
+                               title="Iniciar desde la primera canción"
+                           >
+                               <svg viewBox="0 0 24 24" aria-hidden="true">
+                                   <path d="M18 5v14M5 6l10 6-10 6V6Z" />
+                               </svg>
+                           </button>
+                       </div>
+                   )}
                </div>
             </section>
         );

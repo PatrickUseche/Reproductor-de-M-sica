@@ -649,11 +649,27 @@ export default function App() {
       <section className="listening-layout" aria-label="Reproductor y lista de reproducción">
         <PlayerControls
           currentTrack={playlist.getCurrent()}
+          canStartPlayback={playlist.getSize() > 0}
+          onStartPlayback={() => {
+            const firstTrack = playlist.getHead();
+            if (!firstTrack) return false;
+            playlist.setCurrentNode(firstTrack);
+            if (shuffleEnabled) resetShuffleQueue(firstTrack.content.getId());
+            refresh();
+            return true;
+          }}
           shuffleEnabled={shuffleEnabled}
           onToggleShuffle={toggleShuffle}
           onNext={(repeatPlaylist = false, shuffle = false) => {
             const currentTrack = playlist.getCurrent();
-            if (!currentTrack) return false;
+            if (!currentTrack) {
+              const firstTrack = playlist.getHead();
+              if (!firstTrack) return false;
+              playlist.setCurrentNode(firstTrack);
+              if (shuffle) resetShuffleQueue(firstTrack.content.getId());
+              refresh();
+              return true;
+            }
             if (shuffle) {
               const nodes = playlist.toArray();
               const existingIds = new Set(nodes.map((node) => node.content.getId()));
@@ -706,6 +722,14 @@ export default function App() {
           }}
           onPrevious={(shuffle = false) => {
             const currentTrack = playlist.getCurrent();
+            if (!currentTrack) {
+              const lastTrack = playlist.getTail();
+              if (!lastTrack) return;
+              playlist.setCurrentNode(lastTrack);
+              if (shuffle) resetShuffleQueue(lastTrack.content.getId());
+              refresh();
+              return;
+            }
             if (shuffle && currentTrack) {
               let previousId = shuffleHistoryRef.current.pop();
               const nodes = playlist.toArray();

@@ -573,6 +573,13 @@ input::placeholder {
   margin: 0;
 }
 
+.empty-player-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
 .placeholder-play,
 .empty-mark {
   display: grid;
