@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TrackNode } from '../core/TrackNode';
 
 interface PlaylistViewProps {
@@ -21,6 +21,14 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
   onDeleteSong,
   onMoveSong,
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const filteredNodes = nodes
+    .map((node, index) => ({ node, index }))
+    .filter(({ node }) => normalizedQuery === ''
+      || node.content.getTitle().toLocaleLowerCase().includes(normalizedQuery)
+      || node.content.getArtist().toLocaleLowerCase().includes(normalizedQuery));
+
   if (nodes.length === 0) {
     return (
       <section className="playlist-panel" aria-labelledby="playlist-title">
@@ -47,10 +55,25 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
           <p className="eyebrow">EN COLA</p>
           <h2 id="playlist-title">Lista de reproducción</h2>
         </div>
-        <span className="track-count">{nodes.length} {nodes.length === 1 ? 'pista' : 'pistas'}</span>
+        <span className="track-count">
+          {normalizedQuery
+            ? `${filteredNodes.length} de ${nodes.length} pistas`
+            : `${nodes.length} ${nodes.length === 1 ? 'pista' : 'pistas'}`}
+        </span>
       </div>
-      <ol className="playlist-list">
-        {nodes.map((node, index) => {
+      <label className="playlist-search">
+        <span>Buscar en la lista</span>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Título o artista"
+          aria-label="Buscar en la playlist por título o artista"
+        />
+      </label>
+      {filteredNodes.length > 0 ? (
+        <ol className="playlist-list">
+        {filteredNodes.map(({ node, index }) => {
           const isHead = node === headNode;
           const isTail = node === tailNode;
           const isCurrent = node === currentNode;
@@ -115,7 +138,13 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
             </li>
           );
         })}
-      </ol>
+        </ol>
+      ) : (
+        <div className="playlist-filter-empty" role="status">
+          <strong>No se encontraron canciones</strong>
+          <p>Prueba con otro título o artista.</p>
+        </div>
+      )}
       <p className="playlist-hint">Selecciona una pista para cargarla en el reproductor.</p>
     </section>
   );

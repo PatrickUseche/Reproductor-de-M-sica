@@ -52,7 +52,7 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 - **Controles de audio:** las pistas de audio directo incluyen control de reproducción, posición y volumen. Los videos de YouTube mantienen los controles oficiales del reproductor incrustado.
 - **Repetición:** elige entre desactivada, repetir la playlist o repetir la canción actual. En el modo playlist, al terminar la última pista se vuelve a la primera.
 - **Búsqueda de YouTube:** escribe un título o artista y pulsa **Buscar**. Selecciona **Añadir y reproducir** para incorporar el resultado y mostrarlo en el reproductor oficial incrustado.
-- **Lista:** selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista.
+- **Lista:** busca por título o artista y selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista completa.
 - **Cuenta:** crea una cuenta o inicia sesión para cargar y guardar la playlist personal en Supabase. El orden y la canción seleccionada se restauran al volver a iniciar sesión y los cambios se sincronizan en vivo entre sesiones abiertas.
 - Los archivos arrastrados se guardan solo en IndexedDB del navegador actual: no se suben a Supabase ni están disponibles en otros dispositivos o navegadores. Al restaurar la aplicación, se añaden después de las pistas sincronizadas con Supabase. Borrar los datos del sitio o del navegador puede eliminarlos.
 - Los controles de YouTube son los que proporciona el propio reproductor. No todos los videos permiten reproducción incrustada; también pueden aplicar restricciones regionales, de edad o del propietario.

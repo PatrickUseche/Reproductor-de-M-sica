@@ -62,6 +62,7 @@ export async function saveLocalAudio(userId: string, files: LocalAudioFile[]): P
 
   const database = await openDatabase();
   const transaction = database.transaction(audioStoreName, 'readwrite');
+  const completion = transactionComplete(transaction);
   const store = transaction.objectStore(audioStoreName);
   const addedAt = Date.now();
 
@@ -78,20 +79,21 @@ export async function saveLocalAudio(userId: string, files: LocalAudioFile[]): P
     } satisfies LocalAudioRecord);
   });
 
-  await transactionComplete(transaction);
+  await completion;
 }
 
 export async function loadLocalAudio(userId: string): Promise<Song[]> {
   const database = await openDatabase();
   const transaction = database.transaction(audioStoreName, 'readonly');
+  const completion = transactionComplete(transaction);
   const request = transaction.objectStore(audioStoreName)
     .index('userId')
     .getAll(userId) as IDBRequest<LocalAudioRecord[]>;
-  const records = await new Promise<LocalAudioRecord[]>((resolve, reject) => {
+  const recordsPromise = new Promise<LocalAudioRecord[]>((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error ?? new Error('No se pudo leer el audio local.'));
   });
-  await transactionComplete(transaction);
+  const [records] = await Promise.all([recordsPromise, completion]);
 
   return records
     .sort((left, right) => left.addedAt - right.addedAt)
@@ -107,6 +109,7 @@ export async function loadLocalAudio(userId: string): Promise<Song[]> {
 export async function deleteLocalAudio(userId: string, songId: string): Promise<void> {
   const database = await openDatabase();
   const transaction = database.transaction(audioStoreName, 'readwrite');
+  const completion = transactionComplete(transaction);
   transaction.objectStore(audioStoreName).delete(`${userId}:${songId}`);
-  await transactionComplete(transaction);
+  await completion;
 }

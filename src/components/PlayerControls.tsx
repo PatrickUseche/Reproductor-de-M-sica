@@ -32,7 +32,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     if (currentTrackId !== previousTrackId) {
         setPreviousTrackId(currentTrackId);
         setCurrentTime(0);
-        setDuration(0);
+        const trackDuration = currentTrack?.content.getDuration() ?? 0;
+        setDuration(Number.isFinite(trackDuration) && trackDuration > 0 ? trackDuration : 0);
         if (!currentTrack || currentTrack.content.getSource() === 'youtube') {
             setIsPlaying(false);
         }
@@ -82,17 +83,22 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             return;
         }
 
-        const newAudio = new Audio(song.getAudioUrl());
+        const newAudio = new Audio();
+        newAudio.preload = 'metadata';
         newAudio.volume = volumeRef.current;
         audioRef.current = newAudio;
 
         const updateDuration = () => {
             const mediaDuration = newAudio.duration;
-            setDuration(Number.isFinite(mediaDuration) ? mediaDuration : song.getDuration());
+            const knownDuration = Number.isFinite(mediaDuration) && mediaDuration > 0
+                ? mediaDuration
+                : song.getDuration();
+            setDuration(Number.isFinite(knownDuration) && knownDuration > 0 ? knownDuration : 0);
         };
         newAudio.ontimeupdate = () => setCurrentTime(newAudio.currentTime);
         newAudio.onloadedmetadata = updateDuration;
         newAudio.ondurationchange = updateDuration;
+        newAudio.oncanplay = updateDuration;
         newAudio.onplay = () => setIsPlaying(true);
         newAudio.onpause = () => setIsPlaying(false);
         newAudio.onended = () => {
@@ -119,6 +125,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 setIsPlaying(false);
             }
         };
+        newAudio.src = song.getAudioUrl();
+        newAudio.load();
         updateDuration();
 
         if (isPlayingRef.current) {
@@ -131,6 +139,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             newAudio.ontimeupdate = null;
             newAudio.onloadedmetadata = null;
             newAudio.ondurationchange = null;
+            newAudio.oncanplay = null;
             newAudio.onplay = null;
             newAudio.onpause = null;
             newAudio.onended = null;
@@ -271,10 +280,13 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         <input
                             type="range"
                             min="0"
-                            max={duration || 0}
+                            max={duration > 0 ? duration : 1}
                             step="0.1"
-                            value={Math.min(currentTime, duration || 0)}
+                            value={duration > 0 ? Math.min(currentTime, duration) : 0}
                             disabled={!duration}
+                            style={{
+                                background: `linear-gradient(to right, var(--teal) ${duration > 0 ? (currentTime / duration) * 100 : 0}%, #dbe3df ${duration > 0 ? (currentTime / duration) * 100 : 0}%)`,
+                            }}
                             aria-label="Posición de reproducción"
                             onChange={(event) => {
                                 const nextTime = Number(event.target.value);
