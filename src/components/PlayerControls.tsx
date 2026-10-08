@@ -15,8 +15,7 @@ const repeatModes: RepeatMode[] = ['off', 'playlist', 'track'];
 const videoVisibilityStorageKey = 'music-player-youtube-video-visible';
 const volumeStorageKey = 'music-player-volume';
 const mutedStorageKey = 'music-player-muted';
-const playbackPositionsStorageKey = 'music-player-playback-positions';
-const maximumSavedPlaybackPositions = 100;
+const legacyPlaybackPositionsStorageKey = 'music-player-playback-positions';
 
 function loadVolumePreference() {
     try {
@@ -36,51 +35,6 @@ function loadMutedPreference() {
     } catch (error) {
         console.error('No se pudo leer la preferencia de silencio:', error);
         return false;
-    }
-}
-
-function loadPlaybackPosition(trackId: string) {
-    try {
-        const savedPositions: unknown = JSON.parse(
-            window.localStorage.getItem(playbackPositionsStorageKey) ?? '{}',
-        );
-        if (typeof savedPositions !== 'object' || savedPositions === null || Array.isArray(savedPositions)) {
-            return 0;
-        }
-        const savedPosition = (savedPositions as Record<string, unknown>)[trackId];
-        return typeof savedPosition === 'number' && Number.isFinite(savedPosition) && savedPosition > 0
-            ? savedPosition
-            : 0;
-    } catch (error) {
-        console.error('No se pudo leer la posición de reproducción guardada:', error);
-        return 0;
-    }
-}
-
-function savePlaybackPosition(trackId: string, currentTime: number) {
-    if (!Number.isFinite(currentTime) || currentTime < 0) return;
-
-    try {
-        const savedPositions: Record<string, number> = {};
-        const parsed: unknown = JSON.parse(
-            window.localStorage.getItem(playbackPositionsStorageKey) ?? '{}',
-        );
-        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-            for (const [id, position] of Object.entries(parsed)) {
-                if (typeof position === 'number' && Number.isFinite(position) && position >= 0) {
-                    savedPositions[id] = position;
-                }
-            }
-        }
-        delete savedPositions[trackId];
-        savedPositions[trackId] = currentTime;
-        const savedTrackIds = Object.keys(savedPositions);
-        for (const id of savedTrackIds.slice(0, Math.max(0, savedTrackIds.length - maximumSavedPlaybackPositions))) {
-            delete savedPositions[id];
-        }
-        window.localStorage.setItem(playbackPositionsStorageKey, JSON.stringify(savedPositions));
-    } catch (error) {
-        console.error('No se pudo guardar la posición de reproducción:', error);
     }
 }
 
@@ -145,6 +99,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     if (currentTrackId !== previousTrackId) {
         setPreviousTrackId(currentTrackId);
+        setPlaybackProgress({ trackId: currentTrackId, currentTime: 0, duration: 0 });
         if (!currentTrack || currentTrack.content.getSource() === 'youtube') {
             setIsPlaying(false);
         }
@@ -171,8 +126,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     const isPlayingRef = useRef(isPlaying);
     const onNextRef = useRef(onNext);
     const onPreviousRef = useRef(onPrevious);
-    const currentTrackIdRef = useRef(currentTrackId);
-    const lastPositionWriteRef = useRef(0);
     const [youtubePlayerError, setYoutubePlayerError] = useState<{ trackId: string; message: string } | null>(null);
     const [youtubePlaybackNotice, setYoutubePlaybackNotice] = useState<string | null>(null);
 
@@ -180,9 +133,16 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         isPlayingRef.current = isPlaying;
         onNextRef.current = onNext;
         onPreviousRef.current = onPrevious;
-        currentTrackIdRef.current = currentTrackId;
         shuffleEnabledRef.current = shuffleEnabled;
-    }, [currentTrackId, isPlaying, onNext, onPrevious, shuffleEnabled]);
+    }, [isPlaying, onNext, onPrevious, shuffleEnabled]);
+
+    useEffect(() => {
+        try {
+            window.localStorage.removeItem(legacyPlaybackPositionsStorageKey);
+        } catch (error) {
+            console.error('No se pudo borrar el progreso de reproducción guardado:', error);
+        }
+    }, []);
 
     useEffect(() => {
         volumeRef.current = volume;
@@ -234,8 +194,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         newAudio.preload = 'metadata';
         newAudio.volume = isMutedRef.current ? 0 : volumeRef.current;
         audioRef.current = newAudio;
-        let restoredPosition = false;
-        let trackEnded = false;
 
         const updateDuration = () => {
             if (audioRef.current !== newAudio) return;
@@ -243,13 +201,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             const knownDuration = Number.isFinite(mediaDuration) && mediaDuration > 0
                 ? mediaDuration
                 : song.getDuration();
-            if (!restoredPosition && Number.isFinite(mediaDuration) && mediaDuration > 0) {
-                restoredPosition = true;
-                const savedPosition = loadPlaybackPosition(song.getId());
-                if (savedPosition > 0 && savedPosition < mediaDuration - 2) {
-                    newAudio.currentTime = savedPosition;
-                }
-            }
             setPlaybackProgress({
                 trackId: song.getId(),
                 currentTime: newAudio.currentTime,
@@ -263,10 +214,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 currentTime: newAudio.currentTime,
                 duration: progress.trackId === song.getId() ? progress.duration : 0,
             }));
-            if (Date.now() - lastPositionWriteRef.current >= 5000) {
-                savePlaybackPosition(song.getId(), newAudio.currentTime);
-                lastPositionWriteRef.current = Date.now();
-            }
         };
         newAudio.onloadedmetadata = updateDuration;
         newAudio.ondurationchange = updateDuration;
@@ -277,17 +224,13 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         newAudio.onpause = () => {
             if (audioRef.current === newAudio) {
                 setIsPlaying(false);
-                if (!trackEnded) savePlaybackPosition(song.getId(), newAudio.currentTime);
             }
         };
         newAudio.onended = () => {
             if (audioRef.current !== newAudio) return;
-            trackEnded = true;
-            savePlaybackPosition(song.getId(), 0);
             const mode = repeatModeRef.current;
             if (mode === 'track') {
                 newAudio.currentTime = 0;
-                trackEnded = false;
                 void newAudio.play().catch((error: unknown) => {
                     console.error('Error al repetir la pista:', error);
                     setIsPlaying(false);
@@ -304,7 +247,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 setIsPlaying(true);
             } else if (mode === 'playlist') {
                 newAudio.currentTime = 0;
-                trackEnded = false;
                 void newAudio.play().catch((error: unknown) => {
                     console.error('Error al repetir la playlist:', error);
                     setIsPlaying(false);
@@ -323,7 +265,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         }
 
         return () => {
-            if (!trackEnded) savePlaybackPosition(song.getId(), newAudio.currentTime);
             newAudio.ontimeupdate = null;
             newAudio.onloadedmetadata = null;
             newAudio.ondurationchange = null;
@@ -367,11 +308,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     onReady: ({ target }) => {
                         target.getIframe().title = `Reproduciendo ${trackTitle}`;
                         target.setVolume(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
-                        const savedPosition = loadPlaybackPosition(trackId);
-                        const videoDuration = target.getDuration();
-                        if (savedPosition > 0 && (!videoDuration || savedPosition < videoDuration - 2)) {
-                            target.seekTo(savedPosition, true);
-                        }
                     },
                     onStateChange: ({ data }) => {
                         if (data === api.PlayerState.PLAYING) {
@@ -383,13 +319,11 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         }
                         if (data === api.PlayerState.PAUSED) {
                             setIsPlaying(false);
-                            if (!trackEnded) savePlaybackPosition(trackId, player?.getCurrentTime() ?? 0);
                             return;
                         }
                         if (data !== api.PlayerState.ENDED) return;
                         trackEnded = true;
                         setIsPlaying(false);
-                        savePlaybackPosition(trackId, 0);
                         const mode = repeatModeRef.current;
                         if (mode === 'track') {
                             player?.seekTo(0, true);
@@ -440,9 +374,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
         return () => {
             cancelled = true;
-            if (player && !trackEnded) {
-                savePlaybackPosition(trackId, player.getCurrentTime());
-            }
             player?.destroy();
             if (youtubePlayerRef.current === player) youtubePlayerRef.current = null;
             container.replaceChildren();
@@ -458,28 +389,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             const nextDuration = player.getDuration();
             if (!Number.isFinite(nextTime) || !Number.isFinite(nextDuration)) return;
             setPlaybackProgress({ trackId: currentTrackId, currentTime: nextTime, duration: nextDuration });
-            if (Date.now() - lastPositionWriteRef.current >= 5000) {
-                savePlaybackPosition(currentTrackId, nextTime);
-                lastPositionWriteRef.current = Date.now();
-            }
         };
         const interval = window.setInterval(syncProgress, 1000);
         return () => window.clearInterval(interval);
     }, [currentTrackId, youtubeVideoId]);
-
-    useEffect(() => {
-        const saveCurrentPosition = () => {
-            const trackId = currentTrackIdRef.current;
-            if (!trackId) return;
-            const currentPosition = audioRef.current?.currentTime ?? youtubePlayerRef.current?.getCurrentTime();
-            if (currentPosition !== undefined) savePlaybackPosition(trackId, currentPosition);
-        };
-        window.addEventListener('pagehide', saveCurrentPosition);
-        return () => {
-            window.removeEventListener('pagehide', saveCurrentPosition);
-            saveCurrentPosition();
-        };
-    }, []);
 
     const togglePlayPause = useCallback(() => {
         if (!currentTrack) return;
@@ -635,7 +548,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                                 currentTime: nextTime,
                                 duration,
                             });
-                            if (currentTrackId) savePlaybackPosition(currentTrackId, nextTime);
                         }}
                     />
                     <div className="audio-time" aria-live="off">
