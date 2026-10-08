@@ -3,24 +3,39 @@ import { searchYouTubeSongs, type YouTubeVideo } from '../services/youtube';
 import type { Song } from '../types/Song';
 
 interface PlaylistSuggestionsProps {
-  seedSong: Song | null;
-  existingVideoIds: string[];
+  songs: Song[];
   onAddSong: (video: YouTubeVideo) => void;
 }
 
-function normalizedSongTitle(value: string) {
+function normalizeWords(value: string) {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase()
     .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
-    .replace(/\b(official|video|audio|lyrics?|visualizer|remaster(ed)?|4k|hd|topic)\b/g, ' ')
+    .replace(/\b(official|video|audio|lyrics?|visualizer|remaster(ed)?|4k|hd|topic|music|musica)\b/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 1);
 }
 
-function shuffledVideos(videos: YouTubeVideo[]) {
-  const shuffled = [...videos];
+function titleMatchesPlaylist(candidateTitle: string, playlistTitles: string[][]) {
+  const candidateWords = new Set(normalizeWords(candidateTitle));
+  if (candidateWords.size === 0) return false;
+
+  return playlistTitles.some((titleWords) => {
+    const existingWords = new Set(titleWords);
+    if (existingWords.size === 0) return false;
+    const sharedWords = [...candidateWords].filter((word) => existingWords.has(word)).length;
+    const shorterTitleWordCount = Math.min(candidateWords.size, existingWords.size);
+    return sharedWords === shorterTitleWordCount
+      || (shorterTitleWordCount >= 3 && sharedWords / shorterTitleWordCount >= 0.75);
+  });
+}
+
+function shuffledValues<T>(values: T[]) {
+  const shuffled = [...values];
   for (let index = shuffled.length - 1; index > 0; index--) {
     const swapIndex = Math.floor(Math.random() * (index + 1));
     [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
@@ -28,55 +43,79 @@ function shuffledVideos(videos: YouTubeVideo[]) {
   return shuffled;
 }
 
-/** Sugiere canciones relacionadas con la última pista añadida, sin agregarlas automáticamente. */
-export function PlaylistSuggestions({
-  seedSong,
-  existingVideoIds,
-  onAddSong,
-}: PlaylistSuggestionsProps) {
+function shuffledVideos(videos: YouTubeVideo[]) {
+  return shuffledValues(videos);
+}
+
+function artistSearchQuery(songs: Song[]) {
+  const artists = [...new Set(songs
+    .map((song) => song.getArtist()
+      .replace(/\s*-\s*Topic$/i, '')
+      .replace(/\s+(VEVO|Official)$/i, '')
+      .trim())
+    .filter((artist) => artist && artist !== 'Archivo local'))];
+
+  if (artists.length === 0) return 'canciones música';
+
+  const alternatives = artists.map((artist) => `"${artist.replace(/["|]/g, ' ')}"`);
+  let query = '';
+  for (const alternative of alternatives) {
+    const nextQuery = query ? `${query}|${alternative}` : alternative;
+    if (nextQuery.length > 450) continue;
+    query = nextQuery;
+  }
+
+  return `${query || alternatives[0]} música`;
+}
+
+/** Sugiere canciones al azar entre artistas presentes en toda la playlist. */
+export function PlaylistSuggestions({ songs, onAddSong }: PlaylistSuggestionsProps) {
   const [results, setResults] = useState<{
-    seedId: string;
+    playlistKey: string;
     videos: YouTubeVideo[];
   } | null>(null);
-  const [loadingSeedId, setLoadingSeedId] = useState<string | null>(null);
-  const [failure, setFailure] = useState<{ seedId: string; message: string } | null>(null);
-  const existingIds = new Set(existingVideoIds);
-  const seedId = seedSong?.getId() ?? null;
-  const videos = results?.seedId === seedId ? results.videos : [];
-  const seedTitle = seedSong ? normalizedSongTitle(seedSong.getTitle()) : '';
-  const availableVideos = videos.filter((video) => {
-    if (existingIds.has(video.id.videoId)) return false;
-    const candidateTitle = normalizedSongTitle(video.snippet.title);
-    return candidateTitle !== seedTitle
-      && !candidateTitle.startsWith(`${seedTitle} `)
-      && !seedTitle.startsWith(`${candidateTitle} `);
-  }).slice(0, 5);
-  const error = failure?.seedId === seedId ? failure.message : '';
-  const isLoading = loadingSeedId === seedId;
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [failure, setFailure] = useState<{ playlistKey: string; message: string } | null>(null);
+  const playlistKey = songs.map((song) =>
+    `${song.getId()}:${song.getTitle()}:${song.getArtist()}:${song.getAudioUrl()}`,
+  ).join('|');
+  const searchQuery = artistSearchQuery(songs);
+  const playlistVideoIds = new Set(songs
+    .filter((song) => song.getSource() === 'youtube')
+    .map((song) => song.getAudioUrl()));
+  const playlistTitles = songs.map((song) => normalizeWords(song.getTitle()));
+  const videos = results?.playlistKey === playlistKey ? results.videos : [];
+  const availableVideos = videos.filter((video) =>
+    !playlistVideoIds.has(video.id.videoId)
+    && !titleMatchesPlaylist(video.snippet.title, playlistTitles),
+  ).slice(0, 10);
+  const error = failure?.playlistKey === playlistKey ? failure.message : '';
+  const isLoading = loadingKey === playlistKey;
 
   useEffect(() => {
-    if (!seedSong) return;
+    if (!playlistKey) return;
 
     const controller = new AbortController();
-    const currentSeedId = seedSong.getId();
+    const currentPlaylistKey = playlistKey;
     const timeout = window.setTimeout(() => {
-      setLoadingSeedId(currentSeedId);
-      const artist = seedSong.getArtist() === 'Archivo local' ? '' : seedSong.getArtist();
-      const query = `${artist} ${seedSong.getTitle()} música`.trim();
-      void searchYouTubeSongs(query, controller.signal).then((nextVideos) => {
+      setLoadingKey(currentPlaylistKey);
+      void searchYouTubeSongs(searchQuery, controller.signal).then((nextVideos) => {
         if (controller.signal.aborted) return;
-        setResults({ seedId: currentSeedId, videos: shuffledVideos(nextVideos) });
+        setResults({
+          playlistKey: currentPlaylistKey,
+          videos: shuffledVideos(nextVideos),
+        });
         setFailure(null);
       }).catch((searchError: unknown) => {
         if (controller.signal.aborted) return;
         setFailure({
-          seedId: currentSeedId,
+          playlistKey: currentPlaylistKey,
           message: searchError instanceof Error
             ? searchError.message
             : 'No se pudieron cargar sugerencias.',
         });
       }).finally(() => {
-        if (!controller.signal.aborted) setLoadingSeedId(null);
+        if (!controller.signal.aborted) setLoadingKey(null);
       });
     }, 0);
 
@@ -84,7 +123,7 @@ export function PlaylistSuggestions({
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [seedSong]);
+  }, [playlistKey, searchQuery]);
 
   return (
     <section className="playlist-suggestions" aria-labelledby="playlist-suggestions-title">
@@ -92,19 +131,19 @@ export function PlaylistSuggestions({
         <div>
           <p className="eyebrow">PARA SEGUIR ESCUCHANDO</p>
           <h2 id="playlist-suggestions-title">Sugerencias</h2>
-          <p className="suggestions-description">Opciones aleatorias relacionadas con la canción añadida.</p>
+          <p className="suggestions-description">Selección aleatoria basada en todos los artistas de tu playlist.</p>
         </div>
-        {seedSong && <span>Basadas en {seedSong.getTitle()}</span>}
+        <span>{songs.length} {songs.length === 1 ? 'canción' : 'canciones'} consideradas</span>
       </div>
-      {isLoading && <p className="suggestions-message" role="status">Buscando canciones relacionadas…</p>}
+      {isLoading && <p className="suggestions-message" role="status">Buscando artistas y canciones similares…</p>}
       {!isLoading && error && <p className="form-error" role="alert">{error}</p>}
-      {!isLoading && !error && seedSong && availableVideos.length === 0 && (
+      {!isLoading && !error && songs.length > 0 && availableVideos.length === 0 && (
         <p className="suggestions-message" role="status">
-          No hay sugerencias nuevas por ahora. Las sugerencias solo se agregan cuando eliges «Añadir».
+          No hay sugerencias nuevas. Se excluyen las canciones que ya están en la playlist.
         </p>
       )}
-      {!seedSong && (
-        <p className="suggestions-message">Añade una canción para recibir sugerencias relacionadas.</p>
+      {songs.length === 0 && (
+        <p className="suggestions-message">Añade canciones para recibir sugerencias relacionadas con sus artistas.</p>
       )}
       {availableVideos.length > 0 && (
         <ul className="youtube-results">

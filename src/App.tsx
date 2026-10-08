@@ -108,7 +108,6 @@ export default function App() {
   const [syncError, setSyncError] = useState('');
   const [localAudioError, setLocalAudioError] = useState('');
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
-  const [suggestionSeed, setSuggestionSeed] = useState<Song | null>(null);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveRevision = useRef(0);
   const playlistDirtyRef = useRef(false);
@@ -168,7 +167,6 @@ export default function App() {
       const nextUserId = nextSession?.user.id ?? null;
       if (sessionUserId.current !== nextUserId) {
         setLoadedUserId(null);
-        setSuggestionSeed(null);
         setLoadError('');
         playlistDirtyRef.current = false;
         setPlaylistDirty(false);
@@ -218,7 +216,6 @@ export default function App() {
       }
       restorePlaylist(playlist, snapshot ?? { songs: [], currentSongId: null });
       for (const song of loadedLocalSongs) playlist.insertAtEnd(song);
-      setSuggestionSeed(playlist.getTail()?.content ?? null);
       shuffleQueueRef.current = [];
       shuffleHistoryRef.current = [];
       setLoadedUserId(userId);
@@ -248,7 +245,6 @@ export default function App() {
       if (snapshotsMatch(currentSnapshot, snapshot) || playlistDirtyRef.current || syncStatusRef.current === 'saving') return;
 
       restoreRemotePlaylist(playlist, snapshot);
-      setSuggestionSeed(playlist.getTail()?.content ?? null);
       setVersion((currentVersion) => currentVersion + 1);
       setSyncStatus('saved');
       setSyncError('');
@@ -367,7 +363,6 @@ export default function App() {
     );
     playlist.insertAtEnd(song);
     insertShuffleTrack(song.getId());
-    setSuggestionSeed(song);
     refresh();
   };
 
@@ -390,7 +385,6 @@ export default function App() {
       );
       playlist.insertAtEnd(song);
       playlist.setCurrentNode(playlist.getTail());
-      setSuggestionSeed(song);
     }
 
     if (shuffleEnabled) resetShuffleQueue(existingNode?.content.getId() ?? playlist.getTail()?.content.getId() ?? null);
@@ -556,9 +550,6 @@ export default function App() {
                 if (currentPosition < 0 || !playlist.deleteAtPosition(currentPosition)) return;
                 removeShuffleTrack(song.getId());
                 if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
-                if (suggestionSeed?.getId() === song.getId()) {
-                  setSuggestionSeed(playlist.getTail()?.content ?? null);
-                }
                 refresh();
               };
 
@@ -578,10 +569,7 @@ export default function App() {
             }}
           />
           <PlaylistSuggestions
-            seedSong={suggestionSeed}
-            existingVideoIds={playlist.toArray()
-              .filter((node) => node.content.getSource() === 'youtube')
-              .map((node) => node.content.getAudioUrl())}
+            songs={playlist.toArray().map((node) => node.content)}
             onAddSong={handleAddYouTubeSong}
           />
         </div>
@@ -648,7 +636,6 @@ export default function App() {
               insertShuffleTrack(song.getId());
             });
             if (songs.length > 0) {
-              setSuggestionSeed(songs[songs.length - 1]);
               refresh();
             }
             setLocalAudioError('');
