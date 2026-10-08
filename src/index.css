@@ -25,7 +25,6 @@
 }
 
 body {
-  min-width: 320px;
   min-height: 100vh;
   margin: 0;
   background:
@@ -81,6 +80,7 @@ input::placeholder {
 
 .app-shell {
   width: min(1280px, 100%);
+  min-width: 0;
   min-height: 100vh;
   margin: 0 auto;
   padding: 32px clamp(18px, 4vw, 52px) 56px;
@@ -595,8 +595,11 @@ input::placeholder {
 
 .youtube-results {
   display: grid;
+  width: 100%;
+  min-width: 0;
   gap: 9px;
   max-height: 420px;
+  overflow-x: hidden;
   overflow-y: auto;
   margin: 15px 0 0;
   padding: 0 4px 0 0;
@@ -604,7 +607,8 @@ input::placeholder {
 }
 
 .youtube-result {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   min-width: 0;
   align-items: center;
   gap: 10px;
@@ -617,8 +621,9 @@ input::placeholder {
 
 .youtube-result-play {
   display: flex;
-  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
+  align-self: stretch;
   align-items: center;
   gap: 10px;
   border-color: transparent;
@@ -672,6 +677,16 @@ input::placeholder {
   color: var(--teal-dark);
   background: var(--teal-pale);
   font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .youtube-result {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .youtube-result > button:not(.youtube-result-play) {
+    width: 100%;
+  }
 }
 
 .form-error {
@@ -918,13 +933,6 @@ input::placeholder {
     font-size: 8px;
   }
 
-  .youtube-result {
-    flex-wrap: wrap;
-  }
-
-  .youtube-result button {
-    width: 100%;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
