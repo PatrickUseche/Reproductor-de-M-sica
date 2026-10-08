@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AccountAccess } from './components/AccountAccess';
 import { PlayerControls } from './components/PlayerControls';
 import { PlaylistView } from './components/PlaylistView';
+import { PlaylistSuggestions } from './components/PlaylistSuggestions';
 import { SongForm, type AudioFileFailure, type AudioFileImportResult } from './components/SongForm';
 import { YouTubeSearch } from './components/YouTubeSearch';
 import { SongPlaylist } from './core/SongPlaylist';
@@ -107,6 +108,7 @@ export default function App() {
   const [syncError, setSyncError] = useState('');
   const [localAudioError, setLocalAudioError] = useState('');
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
+  const [suggestionSeed, setSuggestionSeed] = useState<Song | null>(null);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveRevision = useRef(0);
   const playlistDirtyRef = useRef(false);
@@ -166,6 +168,7 @@ export default function App() {
       const nextUserId = nextSession?.user.id ?? null;
       if (sessionUserId.current !== nextUserId) {
         setLoadedUserId(null);
+        setSuggestionSeed(null);
         setLoadError('');
         playlistDirtyRef.current = false;
         setPlaylistDirty(false);
@@ -215,6 +218,7 @@ export default function App() {
       }
       restorePlaylist(playlist, snapshot ?? { songs: [], currentSongId: null });
       for (const song of loadedLocalSongs) playlist.insertAtEnd(song);
+      setSuggestionSeed(playlist.getTail()?.content ?? null);
       shuffleQueueRef.current = [];
       shuffleHistoryRef.current = [];
       setLoadedUserId(userId);
@@ -244,6 +248,7 @@ export default function App() {
       if (snapshotsMatch(currentSnapshot, snapshot) || playlistDirtyRef.current || syncStatusRef.current === 'saving') return;
 
       restoreRemotePlaylist(playlist, snapshot);
+      setSuggestionSeed(playlist.getTail()?.content ?? null);
       setVersion((currentVersion) => currentVersion + 1);
       setSyncStatus('saved');
       setSyncError('');
@@ -362,6 +367,7 @@ export default function App() {
     );
     playlist.insertAtEnd(song);
     insertShuffleTrack(song.getId());
+    setSuggestionSeed(song);
     refresh();
   };
 
@@ -384,6 +390,7 @@ export default function App() {
       );
       playlist.insertAtEnd(song);
       playlist.setCurrentNode(playlist.getTail());
+      setSuggestionSeed(song);
     }
 
     if (shuffleEnabled) resetShuffleQueue(existingNode?.content.getId() ?? playlist.getTail()?.content.getId() ?? null);
@@ -531,41 +538,53 @@ export default function App() {
           }}
         />
 
-        <PlaylistView
-          nodes={playlist.toArray()}
-          headNode={playlist.getHead()}
-          tailNode={playlist.getTail()}
-          currentNode={playlist.getCurrent()}
-          onSelectSong={handleSelectSong}
-          onDeleteSong={(position) => {
-            const song = playlist.toArray()[position]?.content;
-            if (!song) return;
+        <div className="playlist-column">
+          <PlaylistView
+            nodes={playlist.toArray()}
+            headNode={playlist.getHead()}
+            tailNode={playlist.getTail()}
+            currentNode={playlist.getCurrent()}
+            onSelectSong={handleSelectSong}
+            onDeleteSong={(position) => {
+              const song = playlist.toArray()[position]?.content;
+              if (!song) return;
 
-            const audioUrl = song.getAudioUrl();
-            const finishDeletion = () => {
-              const currentPosition = playlist.toArray()
-                .findIndex((node) => node.content.getId() === song.getId());
-              if (currentPosition < 0 || !playlist.deleteAtPosition(currentPosition)) return;
-              removeShuffleTrack(song.getId());
-              if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
-              refresh();
-            };
+              const audioUrl = song.getAudioUrl();
+              const finishDeletion = () => {
+                const currentPosition = playlist.toArray()
+                  .findIndex((node) => node.content.getId() === song.getId());
+                if (currentPosition < 0 || !playlist.deleteAtPosition(currentPosition)) return;
+                removeShuffleTrack(song.getId());
+                if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+                if (suggestionSeed?.getId() === song.getId()) {
+                  setSuggestionSeed(playlist.getTail()?.content ?? null);
+                }
+                refresh();
+              };
 
-            if (audioUrl.startsWith('blob:')) {
-              void deleteLocalAudio(session.user.id, song.getId()).then(() => {
-                setLocalAudioError('');
+              if (audioUrl.startsWith('blob:')) {
+                void deleteLocalAudio(session.user.id, song.getId()).then(() => {
+                  setLocalAudioError('');
+                  finishDeletion();
+                }).catch((error: unknown) => {
+                  setLocalAudioError(error instanceof Error ? error.message : 'No se pudo eliminar el archivo local.');
+                });
+              } else {
                 finishDeletion();
-              }).catch((error: unknown) => {
-                setLocalAudioError(error instanceof Error ? error.message : 'No se pudo eliminar el archivo local.');
-              });
-            } else {
-              finishDeletion();
-            }
-          }}
-          onMoveSong={(fromPosition, toPosition) => {
-            if (playlist.moveToPosition(fromPosition, toPosition)) refresh();
-          }}
-        />
+              }
+            }}
+            onMoveSong={(fromPosition, toPosition) => {
+              if (playlist.moveToPosition(fromPosition, toPosition)) refresh();
+            }}
+          />
+          <PlaylistSuggestions
+            seedSong={suggestionSeed}
+            existingVideoIds={playlist.toArray()
+              .filter((node) => node.content.getSource() === 'youtube')
+              .map((node) => node.content.getAudioUrl())}
+            onAddSong={handleAddYouTubeSong}
+          />
+        </div>
       </section>
 
       <section className="library-tools" aria-label="Administrar música">
@@ -628,7 +647,10 @@ export default function App() {
               playlist.insertAtEnd(song);
               insertShuffleTrack(song.getId());
             });
-            if (songs.length > 0) refresh();
+            if (songs.length > 0) {
+              setSuggestionSeed(songs[songs.length - 1]);
+              refresh();
+            }
             setLocalAudioError('');
             return { added: songs.length, failures };
           }}

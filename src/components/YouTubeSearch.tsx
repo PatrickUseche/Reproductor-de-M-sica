@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { searchYouTubeSongs, type YouTubeVideo } from '../services/youtube';
 
 interface YouTubeSearchProps {
@@ -13,51 +13,62 @@ export function YouTubeSearch({ onAddSong, onPlaySong }: YouTubeSearchProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  /** Ejecuta la consulta y refleja carga, resultados y errores en la interfaz. */
-  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  useEffect(() => {
     const searchTerm = query.trim();
-    if (!searchTerm) {
-      setError('Escribe el nombre de una canción o artista para buscar.');
-      setVideos([]);
-      return;
-    }
+    if (searchTerm.length < 3) return;
 
-    setIsLoading(true);
-    setError('');
-    try {
-      const results = await searchYouTubeSongs(searchTerm);
-      setVideos(results);
-      if (results.length === 0) {
-        setError('No se encontraron videos. Prueba con otro nombre.');
-      }
-    } catch (searchError) {
-      setVideos([]);
-      setError(
-        searchError instanceof Error
-          ? searchError.message
-          : 'No se pudo completar la búsqueda de YouTube.',
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      setIsLoading(true);
+      void searchYouTubeSongs(searchTerm, controller.signal).then((results) => {
+        setVideos(results);
+        setError(results.length === 0 ? 'No se encontraron videos. Prueba con otro nombre.' : '');
+      }).catch((searchError: unknown) => {
+        if (controller.signal.aborted) return;
+        setVideos([]);
+        setError(
+          searchError instanceof Error
+            ? searchError.message
+            : 'No se pudo completar la búsqueda de YouTube.',
+        );
+      }).finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [query]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
   };
 
   return (
     <section className="tool-panel" aria-labelledby="youtube-search-title">
       <h2 id="youtube-search-title">Buscar en YouTube</h2>
-      <form className="youtube-search-form" onSubmit={handleSearch}>
+      <form className="youtube-search-form" onSubmit={handleSubmit}>
         <input
           type="search"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setVideos([]);
+            setError('');
+            setIsLoading(false);
+          }}
           placeholder="Ej.: nombre de canción o artista"
           aria-label="Buscar canciones en YouTube"
+          aria-describedby="youtube-search-hint"
         />
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Buscando…' : 'Buscar'}
-        </button>
       </form>
+      <p className="search-hint" id="youtube-search-hint" role="status">
+        {query.trim().length < 3
+          ? 'Escribe al menos 3 caracteres para buscar.'
+          : isLoading ? 'Buscando canciones…' : 'Los resultados se actualizan mientras escribes.'}
+      </p>
 
       {error && <p className="form-error" role="alert">{error}</p>}
 
