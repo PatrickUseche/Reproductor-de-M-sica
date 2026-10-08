@@ -246,43 +246,78 @@ input::placeholder {
 .player-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   margin-top: auto;
   padding-top: 22px;
 }
 
-.repeat-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.repeat-control select {
+.icon-button {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 42px;
   min-height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  padding: 7px 9px;
-  color: var(--ink);
-  background: #fff;
-  font: inherit;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  padding: 9px;
+  color: var(--muted);
+  background: transparent;
 }
 
-.repeat-control select:focus-visible {
-  outline: 3px solid rgba(8, 126, 117, 0.28);
-  outline-offset: 2px;
+.icon-button svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
-.shuffle-button {
-  border: 1px solid var(--line);
-  background: #fff;
+.icon-button:hover:not(:disabled) {
+  color: var(--teal-dark);
+  background: var(--teal-pale);
 }
 
-.shuffle-button.is-active {
+.icon-button.is-active {
   border-color: #a8d5ca;
   color: var(--teal-dark);
   background: var(--teal-pale);
+}
+
+.navigation-button {
+  width: 44px;
+  height: 44px;
+  color: var(--ink);
+  background: #f1f5f3;
+}
+
+.navigation-button svg {
+  width: 23px;
+  height: 23px;
+}
+
+.mode-button {
+  width: 40px;
+  height: 40px;
+}
+
+.mode-badge {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  display: grid;
+  width: 13px;
+  height: 13px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--teal);
+  font-size: 9px;
+  line-height: 1;
 }
 
 .primary-button {
@@ -419,7 +454,21 @@ input::placeholder {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+}
+
+.playlist-item {
+  border-radius: 5px;
+  transition: opacity 140ms ease, background-color 140ms ease;
+}
+
+.playlist-item.is-dragging {
+  opacity: 0.45;
+}
+
+.playlist-item.is-drop-target {
+  background: var(--teal-pale);
+  box-shadow: inset 0 0 0 1px #a8d5ca;
 }
 
 .playlist-track {
@@ -448,17 +497,28 @@ input::placeholder {
   background: #fbece8;
 }
 
-.move-track-button {
-  width: 32px;
+.reorder-track-button {
+  display: grid;
+  width: 30px;
   min-height: 34px;
-  padding: 4px;
+  place-items: center;
+  padding: 5px;
   color: var(--teal-dark);
   background: transparent;
-  font-size: 18px;
-  line-height: 1;
+  cursor: grab;
 }
 
-.move-track-button:hover:not(:disabled) {
+.reorder-track-button:active {
+  cursor: grabbing;
+}
+
+.reorder-track-button svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+.reorder-track-button:hover:not(:disabled) {
   background: var(--teal-pale);
 }
 
@@ -567,7 +627,7 @@ input::placeholder {
 
 .library-tools {
   display: grid;
-  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(230px, 0.55fr) minmax(0, 1.45fr);
   align-items: start;
   gap: 18px;
   margin-top: 20px;
@@ -579,6 +639,89 @@ input::placeholder {
 
 .tool-panel > h2 {
   margin-bottom: 16px;
+}
+
+.audio-import-panel {
+  min-height: 0;
+  padding: 18px;
+  border-style: dashed;
+  box-shadow: none;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.audio-import-panel.is-dragging {
+  border-color: var(--teal);
+  background: #f2faf7;
+}
+
+.audio-import-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.audio-import-heading h2 {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.audio-import-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.add-audio-button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 5px;
+  border-color: #c9e3dc;
+  padding: 6px 10px;
+  color: var(--teal-dark);
+  background: var(--teal-pale);
+  font-size: 13px;
+}
+
+.add-audio-button > span {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.audio-drop-hint {
+  margin: 12px 0 0;
+  border-radius: 4px;
+  padding: 8px;
+  color: var(--teal-dark);
+  background: var(--teal-pale);
+  font-size: 13px;
+  text-align: center;
+}
+
+.audio-import-progress-wrap {
+  margin-top: 11px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.audio-import-progress-wrap .audio-import-progress {
+  margin-top: 5px;
+}
+
+.audio-import-panel .audio-local-note {
+  margin-top: 9px;
 }
 
 .youtube-search-form {
@@ -706,35 +849,6 @@ input::placeholder {
   font-size: 13px;
 }
 
-.audio-dropzone {
-  display: grid;
-  min-height: 190px;
-  align-content: center;
-  justify-items: center;
-  gap: 10px;
-  border: 2px dashed #a8c2ba;
-  border-radius: 5px;
-  padding: 24px;
-  color: var(--muted);
-  text-align: center;
-  background: #f8fbf9;
-  transition: background-color 140ms ease, border-color 140ms ease;
-}
-
-.audio-dropzone.is-dragging {
-  border-color: var(--teal);
-  background: var(--teal-pale);
-}
-
-.audio-dropzone strong {
-  color: var(--ink);
-  font-size: 15px;
-}
-
-.audio-dropzone > span:last-child {
-  font-size: 12px;
-}
-
 .audio-import-progress {
   display: block;
   width: 100%;
@@ -750,17 +864,6 @@ input::placeholder {
 .form-error {
   white-space: pre-line;
   overflow-wrap: anywhere;
-}
-
-.audio-drop-icon {
-  display: grid;
-  width: 42px;
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--teal-dark);
-  background: var(--teal-pale);
-  font-size: 24px;
 }
 
 .audio-local-note {
@@ -868,8 +971,78 @@ input::placeholder {
 .account-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
+}
+
+.account-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.profile-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid #cfe0da;
+  border-radius: 50%;
+  color: var(--teal-dark);
+  background: var(--teal-pale);
+  font-size: 12px;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sync-indicator {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #b9ded3;
+  border-radius: 50%;
+  color: #08745f;
+  background: #e9f7f1;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sync-indicator.is-warning {
+  border-color: #efcfad;
+  color: #925627;
+  background: #fff3e3;
+}
+
+.sync-indicator.is-saving {
+  animation: sync-rotate 1.1s linear infinite;
+}
+
+@keyframes sync-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.account-status .sync-error {
+  flex-basis: 100%;
+  text-align: right;
 }
 
 .account-actions p {
@@ -877,10 +1050,6 @@ input::placeholder {
   overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 13px;
-}
-
-.account-actions .sync-status {
-  color: var(--teal-dark);
 }
 
 .account-actions .sync-error {
@@ -915,10 +1084,22 @@ input::placeholder {
 }
 
 @media (max-width: 600px) {
-  .app-header-content,
-  .account-actions {
+  .app-header-content {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .account-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .account-status {
+    justify-content: flex-start;
+  }
+
+  .account-status .sync-error {
+    text-align: left;
   }
 }
 
@@ -946,6 +1127,10 @@ input::placeholder {
   .playlist-panel,
   .tool-panel {
     padding: 16px;
+  }
+
+  .audio-import-panel {
+    padding: 14px;
   }
 
   .playlist-track {

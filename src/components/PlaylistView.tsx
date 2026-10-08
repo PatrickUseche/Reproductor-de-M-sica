@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { TrackNode } from '../core/TrackNode';
 
 interface PlaylistViewProps {
@@ -8,7 +8,7 @@ interface PlaylistViewProps {
   currentNode: TrackNode | null;
   onSelectSong: (node: TrackNode) => void;
   onDeleteSong: (position: number) => void;
-  onMoveSong: (position: number, direction: -1 | 1) => void;
+  onMoveSong: (fromPosition: number, toPosition: number) => void;
 }
 
 /** Representa los enlaces y la selección actual de la lista doblemente enlazada. */
@@ -22,6 +22,9 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
   onMoveSong,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [draggedSongId, setDraggedSongId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const draggedSongIdRef = useRef<string | null>(null);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredNodes = nodes
     .map((node, index) => ({ node, index }))
@@ -80,7 +83,30 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
           const song = node.content;
 
           return (
-            <li className={`playlist-item${isCurrent ? ' is-current' : ''}`} key={song.getId()}>
+            <li
+              className={`playlist-item${isCurrent ? ' is-current' : ''}${draggedSongId === song.getId() ? ' is-dragging' : ''}${dropTargetId === song.getId() ? ' is-drop-target' : ''}`}
+              key={song.getId()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDropTargetId(song.getId());
+              }}
+              onDragLeave={(event) => {
+                const relatedTarget = event.relatedTarget;
+                if (!(relatedTarget instanceof Node) || !event.currentTarget.contains(relatedTarget)) {
+                  setDropTargetId(null);
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const draggedId = draggedSongIdRef.current
+                  || event.dataTransfer.getData('text/plain');
+                const fromPosition = nodes.findIndex((item) => item.content.getId() === draggedId);
+                if (fromPosition >= 0 && fromPosition !== index) onMoveSong(fromPosition, index);
+                draggedSongIdRef.current = null;
+                setDraggedSongId(null);
+                setDropTargetId(null);
+              }}
+            >
               <button
                 className="playlist-track"
                 type="button"
@@ -101,24 +127,31 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
               </button>
               <div className="track-row-actions">
                 <button
-                  className="move-track-button"
+                  className="reorder-track-button"
                   type="button"
-                  title={`Mover ${song.getTitle()} arriba`}
-                  aria-label={`Mover ${song.getTitle()} arriba`}
-                  disabled={index === 0}
-                  onClick={() => onMoveSong(index, -1)}
+                  draggable
+                  title={`Arrastrar ${song.getTitle()} para cambiar su posición`}
+                  aria-label={`Arrastrar ${song.getTitle()} para cambiar su posición`}
+                  onDragStart={(event) => {
+                    draggedSongIdRef.current = song.getId();
+                    setDraggedSongId(song.getId());
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', song.getId());
+                  }}
+                  onDragEnd={() => {
+                    draggedSongIdRef.current = null;
+                    setDraggedSongId(null);
+                    setDropTargetId(null);
+                  }}
                 >
-                  ↑
-                </button>
-                <button
-                  className="move-track-button"
-                  type="button"
-                  title={`Mover ${song.getTitle()} abajo`}
-                  aria-label={`Mover ${song.getTitle()} abajo`}
-                  disabled={index === nodes.length - 1}
-                  onClick={() => onMoveSong(index, 1)}
-                >
-                  ↓
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <circle cx="7" cy="5" r="1.25" />
+                    <circle cx="13" cy="5" r="1.25" />
+                    <circle cx="7" cy="10" r="1.25" />
+                    <circle cx="13" cy="10" r="1.25" />
+                    <circle cx="7" cy="15" r="1.25" />
+                    <circle cx="13" cy="15" r="1.25" />
+                  </svg>
                 </button>
                 <button
                   className="remove-track-button"
@@ -145,7 +178,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({
           <p>Prueba con otro título o artista.</p>
         </div>
       )}
-      <p className="playlist-hint">Selecciona una pista para cargarla en el reproductor.</p>
+      <p className="playlist-hint">Arrastra el control de puntos para cambiar el orden; selecciona una pista para cargarla.</p>
     </section>
   );
 };

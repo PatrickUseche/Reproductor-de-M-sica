@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from 'react';
+import { useRef, useState, type DragEvent } from 'react';
 
 export interface AudioFileFailure {
   fileName: string;
@@ -23,27 +23,24 @@ function isAudioFile(file: File) {
   return file.type.startsWith('audio/') || (!file.type && audioFileExtension.test(file.name));
 }
 
-/** Añade archivos de audio locales soltándolos directamente en la zona. */
+/** Permite elegir archivos locales o soltarlos en el panel compacto. */
 export function SongForm({ onAddFiles }: SongFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ processed: 0, total: 0 });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-    if (isProcessing) return;
+  const handleFiles = async (selectedFiles: File[]) => {
+    if (isProcessing || selectedFiles.length === 0) return;
     setMessage('');
     setError('');
 
-    const droppedFiles = Array.from(event.dataTransfer.files);
-    const audioFiles = droppedFiles.filter(isAudioFile);
-    const rejectedCount = droppedFiles.length - audioFiles.length;
-
+    const audioFiles = selectedFiles.filter(isAudioFile);
+    const rejectedCount = selectedFiles.length - audioFiles.length;
     if (audioFiles.length === 0) {
-      setError('Suelta archivos de audio compatibles, como MP3, WAV, M4A u OGG.');
+      setError('Selecciona archivos de audio compatibles, como MP3, WAV, M4A u OGG.');
       return;
     }
 
@@ -74,43 +71,68 @@ export function SongForm({ onAddFiles }: SongFormProps) {
     }
   };
 
+  const handleDrop = (event: DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    void handleFiles(Array.from(event.dataTransfer.files));
+  };
+
   return (
-    <section className="tool-panel" aria-labelledby="song-form-title">
-      <h2 id="song-form-title">Agregar canciones locales</h2>
-      <div
-        className={`audio-dropzone${isDragging ? ' is-dragging' : ''}`}
-        role="region"
-        aria-label="Zona para arrastrar archivos de audio"
-        aria-busy={isProcessing}
-        onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
-        onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; setIsDragging(true); }}
-        onDragLeave={(event) => {
-          const relatedTarget = event.relatedTarget;
-          if (!(relatedTarget instanceof Node) || !event.currentTarget.contains(relatedTarget)) {
-            setIsDragging(false);
-          }
-        }}
-        onDrop={(event) => { void handleDrop(event); }}
-      >
-        <span className="audio-drop-icon" aria-hidden="true">↓</span>
-        <strong>
-          {isProcessing
-            ? `Procesando ${progress.processed} de ${progress.total} archivos…`
-            : isDragging
-              ? 'Suelta para agregar'
-              : 'Arrastra tus archivos de audio aquí'}
-        </strong>
-        <span>MP3, WAV, M4A, OGG y otros formatos de audio</span>
-      </div>
-      {isProcessing && (
-        <progress
-          className="audio-import-progress"
-          value={progress.processed}
-          max={progress.total}
-          aria-label="Progreso de importación de archivos"
+    <section
+      className={`tool-panel audio-import-panel${isDragging ? ' is-dragging' : ''}`}
+      aria-labelledby="song-form-title"
+      aria-busy={isProcessing}
+      onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
+      onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; setIsDragging(true); }}
+      onDragLeave={(event) => {
+        const relatedTarget = event.relatedTarget;
+        if (!(relatedTarget instanceof Node) || !event.currentTarget.contains(relatedTarget)) {
+          setIsDragging(false);
+        }
+      }}
+      onDrop={handleDrop}
+    >
+      <div className="audio-import-heading">
+        <div>
+          <h2 id="song-form-title">Música local</h2>
+          <p>Elige archivos o arrástralos aquí</p>
+        </div>
+        <button
+          className="add-audio-button"
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isProcessing}
+        >
+          <span aria-hidden="true">＋</span>
+          {isProcessing ? 'Procesando…' : 'Añadir'}
+        </button>
+        <input
+          ref={fileInputRef}
+          className="visually-hidden"
+          type="file"
+          accept="audio/*,.aac,.aif,.aiff,.flac,.m4a,.mp3,.oga,.ogg,.opus,.wav"
+          multiple
+          aria-label="Seleccionar archivos de audio"
+          onChange={(event) => {
+            const selectedFiles = Array.from(event.currentTarget.files ?? []);
+            event.currentTarget.value = '';
+            void handleFiles(selectedFiles);
+          }}
         />
+      </div>
+      {isDragging && <p className="audio-drop-hint" role="status">Suelta los archivos para agregarlos</p>}
+      {isProcessing && (
+        <div className="audio-import-progress-wrap">
+          <span>Procesando {progress.processed} de {progress.total}</span>
+          <progress
+            className="audio-import-progress"
+            value={progress.processed}
+            max={progress.total}
+            aria-label="Progreso de importación de archivos"
+          />
+        </div>
       )}
-      <p className="audio-local-note">Los archivos solo estarán disponibles en esta pestaña; no se suben a la nube.</p>
+      <p className="audio-local-note">Los archivos se guardan solo en este navegador.</p>
       {message && <p className="account-message" role="status">{message}</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
     </section>

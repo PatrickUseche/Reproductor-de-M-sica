@@ -255,6 +255,22 @@ export class SongPlaylist{
         return true;
     }
 
+    /** Mueve una canción a la posición indicada, manteniendo las referencias de la lista. */
+    moveToPosition(fromPosition: number, toPosition: number){
+        if (!Number.isInteger(fromPosition) || !Number.isInteger(toPosition)
+            || fromPosition < 0 || fromPosition >= this._size
+            || toPosition < 0 || toPosition >= this._size
+            || fromPosition === toPosition){
+            return false;
+        }
+
+        const direction = toPosition < fromPosition ? -1 : 1;
+        for (let position = fromPosition; position !== toPosition; position += direction){
+            this.moveAtPosition(position, direction);
+        }
+        return true;
+    }
+
     /** Avanza una posición; se mantiene en la cola al llegar al final. */
     playNext(){
         if (this._current === null) {

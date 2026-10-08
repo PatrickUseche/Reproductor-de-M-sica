@@ -70,6 +70,25 @@ function shuffledTrackIds(playlist: SongPlaylist, excludedId: string | null): st
   return shuffledTrackIdsForIds(ids);
 }
 
+function ProfileAvatar({ avatarUrl, displayName }: { avatarUrl: string | null; displayName: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toLocaleUpperCase();
+
+  return (
+    <span className="profile-avatar">
+      {avatarUrl && !imageFailed
+        ? <img src={avatarUrl} alt={`Foto de perfil de ${displayName}`} onError={() => setImageFailed(true)} />
+        : <span aria-hidden="true">{initials || '♪'}</span>}
+    </span>
+  );
+}
+
 /**
  * Ensambla la interfaz y coordina las acciones sobre la playlist mutable.
  * `refresh` sincroniza React después de que una operación cambia los nodos.
@@ -371,6 +390,31 @@ export default function App() {
     refresh();
   };
 
+  const userMetadata = session.user.user_metadata;
+  const displayName = [
+    userMetadata.full_name,
+    userMetadata.name,
+    userMetadata.preferred_username,
+  ].find((value): value is string => typeof value === 'string' && value.trim() !== '')?.trim() ?? 'Mi perfil';
+  const avatarUrl = [userMetadata.avatar_url, userMetadata.picture]
+    .find((value): value is string => typeof value === 'string' && value.trim() !== '')?.trim() ?? null;
+  const syncIndicatorLabel = syncStatus === 'saving'
+    ? 'Guardando cambios'
+    : syncStatus === 'error'
+      ? 'Error al guardar la playlist'
+      : realtimeStatus === 'disconnected'
+        ? 'Playlist guardada; sincronización en vivo desconectada'
+        : syncStatus === 'saved'
+          ? 'Playlist guardada correctamente'
+          : 'Estado de sincronización pendiente';
+  const syncIndicatorIcon = syncStatus === 'saving'
+    ? '↻'
+    : syncStatus === 'error' || realtimeStatus === 'disconnected'
+      ? '!'
+      : syncStatus === 'saved'
+        ? '✓'
+        : '•';
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -381,19 +425,19 @@ export default function App() {
             <p className="app-description">Organiza tu lista y elige qué escuchar.</p>
           </div>
           <div className="account-actions">
-            <div>
-              <p>{session.user.email}</p>
-              <p className={syncStatus === 'error' ? 'sync-error' : 'sync-status'}>
-                {syncStatus === 'saving'
-                  ? 'Guardando cambios…'
-                  : syncStatus === 'error'
-                    ? 'Error de sincronización'
-                    : realtimeStatus === 'connected'
-                      ? 'Sincronizada en vivo'
-                      : realtimeStatus === 'disconnected'
-                        ? 'Guardada; sincronización en vivo desconectada'
-                        : 'Playlist sincronizada'}
-              </p>
+            <div className="account-status">
+              <div className="profile-identity">
+                <ProfileAvatar key={avatarUrl ?? 'fallback'} avatarUrl={avatarUrl} displayName={displayName} />
+                <span>{displayName}</span>
+              </div>
+              <span
+                className={`sync-indicator${syncStatus === 'error' || realtimeStatus === 'disconnected' ? ' is-warning' : ''}${syncStatus === 'saving' ? ' is-saving' : ''}`}
+                role="status"
+                aria-label={syncIndicatorLabel}
+                title={syncIndicatorLabel}
+              >
+                {syncIndicatorIcon}
+              </span>
               {syncError && <p className="sync-error" role="alert">{syncError}</p>}
             </div>
             {syncStatus === 'error' && (
@@ -518,8 +562,8 @@ export default function App() {
               finishDeletion();
             }
           }}
-          onMoveSong={(position, direction) => {
-            if (playlist.moveAtPosition(position, direction)) refresh();
+          onMoveSong={(fromPosition, toPosition) => {
+            if (playlist.moveToPosition(fromPosition, toPosition)) refresh();
           }}
         />
       </section>

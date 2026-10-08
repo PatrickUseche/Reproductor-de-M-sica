@@ -11,6 +11,13 @@ interface PlayerControlsProps{
 }
 
 type RepeatMode = 'off' | 'playlist' | 'track';
+const repeatModes: RepeatMode[] = ['off', 'playlist', 'track'];
+
+const repeatModeLabels: Record<RepeatMode, string> = {
+    off: 'Desactivada',
+    playlist: 'Playlist',
+    track: 'Canción',
+};
 
 /**
  * Reproduce audio directo con `HTMLAudioElement` y delega los videos de YouTube
@@ -351,46 +358,69 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             )}
 
             <div className="player-actions">
-                <button className="secondary-button" onClick={() => onPrevious(shuffleEnabled)} aria-label="Canción anterior">Anterior</button>
+                <button
+                    className="icon-button navigation-button"
+                    type="button"
+                    onClick={() => onPrevious(shuffleEnabled)}
+                    aria-label="Canción anterior"
+                    title="Canción anterior"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 5v14M19 6l-10 6 10 6V6Z" />
+                    </svg>
+                </button>
 
                 {!youtubeVideoId && (
                     <button
-                        onClick = {togglePlayPause}
+                        onClick={togglePlayPause}
                         className="primary-button"
+                        type="button"
                     >
                         {isPlaying ? '⏸ Pausa' : '▶ Reproducir'}
                     </button>
                 )}
 
-                <label className="repeat-control">
-                    <span>Repetir</span>
-                    <select
-                        value={repeatMode}
-                        onChange={(event) => {
-                            const selectedMode = event.target.value;
-                            if (selectedMode === 'off' || selectedMode === 'playlist' || selectedMode === 'track') {
-                                setRepeatMode(selectedMode);
-                            }
-                        }}
-                        aria-label="Modo de repetición"
-                    >
-                        <option value="off">Desactivada</option>
-                        <option value="playlist">Playlist</option>
-                        <option value="track">Canción</option>
-                    </select>
-                </label>
+                <button
+                    className={`icon-button mode-button${repeatMode !== 'off' ? ' is-active' : ''}`}
+                    type="button"
+                    onClick={() => {
+                        const nextModeIndex = (repeatModes.indexOf(repeatMode) + 1) % repeatModes.length;
+                        setRepeatMode(repeatModes[nextModeIndex]);
+                    }}
+                    aria-label={`Repetición: ${repeatModeLabels[repeatMode]}. Cambiar modo`}
+                    title={`Repetición: ${repeatModeLabels[repeatMode]}`}
+                    aria-pressed={repeatMode !== 'off'}
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3" />
+                    </svg>
+                    {repeatMode === 'track' && <span className="mode-badge" aria-hidden="true">1</span>}
+                </button>
 
                 <button
-                    className={`shuffle-button${shuffleEnabled ? ' is-active' : ''}`}
+                    className={`icon-button mode-button${shuffleEnabled ? ' is-active' : ''}`}
                     type="button"
                     onClick={onToggleShuffle}
                     aria-pressed={shuffleEnabled}
                     aria-label={shuffleEnabled ? 'Desactivar reproducción aleatoria' : 'Activar reproducción aleatoria'}
+                    title={shuffleEnabled ? 'Aleatorio activado' : 'Aleatorio desactivado'}
                 >
-                    {shuffleEnabled ? '🔀 Aleatorio' : 'Aleatorio'}
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+                    </svg>
                 </button>
 
-                <button className="secondary-button" onClick={() => onNext(false, shuffleEnabled)} aria-label="Canción siguiente">Siguiente</button>
+                <button
+                    className="icon-button navigation-button"
+                    type="button"
+                    onClick={() => onNext(false, shuffleEnabled)}
+                    aria-label="Canción siguiente"
+                    title="Canción siguiente"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18 5v14M5 6l10 6-10 6V6Z" />
+                    </svg>
+                </button>
             </div>
         </section>
     );
