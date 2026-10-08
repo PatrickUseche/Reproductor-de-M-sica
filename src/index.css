@@ -297,14 +297,6 @@ input::placeholder {
   font-variant-numeric: tabular-nums;
 }
 
-.audio-volume {
-  grid-template-columns: auto minmax(100px, 180px);
-  align-items: center;
-  justify-content: end;
-  color: var(--muted);
-  font-size: 13px;
-}
-
 .audio-volume span {
   display: flex;
   justify-content: space-between;
@@ -316,11 +308,65 @@ input::placeholder {
   font-variant-numeric: tabular-nums;
 }
 
-.player-shortcuts {
-  margin: -8px 0 0;
+.volume-control {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+}
+
+.volume-toggle {
+  width: 40px;
+  min-height: 40px;
+}
+
+.volume-toggle:hover:not(:disabled),
+.volume-toggle[aria-pressed="true"] {
+  color: var(--teal-dark);
+  background: var(--teal-pale);
+}
+
+.volume-slider-popover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  width: 210px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+  visibility: hidden;
+}
+
+.volume-control:hover .volume-slider-popover,
+.volume-control:focus-within .volume-slider-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+  visibility: visible;
+}
+
+.audio-volume {
+  display: grid;
+  gap: 7px;
   color: var(--muted);
-  font-size: 11px;
-  text-align: center;
+  font-size: 13px;
+}
+
+.audio-volume input {
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--teal);
+  cursor: pointer;
 }
 
 .player-actions {

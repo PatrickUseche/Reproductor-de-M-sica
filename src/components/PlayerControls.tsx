@@ -14,6 +14,7 @@ type RepeatMode = 'off' | 'playlist' | 'track';
 const repeatModes: RepeatMode[] = ['off', 'playlist', 'track'];
 const videoVisibilityStorageKey = 'music-player-youtube-video-visible';
 const volumeStorageKey = 'music-player-volume';
+const mutedStorageKey = 'music-player-muted';
 const playbackPositionsStorageKey = 'music-player-playback-positions';
 const maximumSavedPlaybackPositions = 100;
 
@@ -26,6 +27,15 @@ function loadVolumePreference() {
     } catch (error) {
         console.error('No se pudo leer el volumen guardado:', error);
         return 1;
+    }
+}
+
+function loadMutedPreference() {
+    try {
+        return window.localStorage.getItem(mutedStorageKey) === 'true';
+    } catch (error) {
+        console.error('No se pudo leer la preferencia de silencio:', error);
+        return false;
     }
 }
 
@@ -126,6 +136,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         duration: number;
     }>({ trackId: null, currentTime: 0, duration: 0 });
     const [volume, setVolume] = useState(loadVolumePreference);
+    const [isMuted, setIsMuted] = useState(loadMutedPreference);
     const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
     const [isVideoVisible, setIsVideoVisible] = useState(loadVideoVisibilityPreference);
     const currentTrackId = currentTrack?.content.getId() ?? null;
@@ -151,6 +162,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     // Referencia para mantener una unica instancia del objeto Audio.
     const audioRef = useRef<HTMLAudioElement | null >(null);
     const volumeRef = useRef(volume);
+    const isMutedRef = useRef(isMuted);
+    const lastNonzeroVolumeRef = useRef(volume > 0 ? volume : 1);
     const repeatModeRef = useRef(repeatMode);
     const shuffleEnabledRef = useRef(shuffleEnabled);
     const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
@@ -173,14 +186,25 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     useEffect(() => {
         volumeRef.current = volume;
-        if (audioRef.current) audioRef.current.volume = volume;
-        if (youtubePlayerRef.current) youtubePlayerRef.current.setVolume(Math.round(volume * 100));
+        isMutedRef.current = isMuted;
+        if (volume > 0) lastNonzeroVolumeRef.current = volume;
+        const effectiveVolume = isMuted ? 0 : volume;
+        if (audioRef.current) audioRef.current.volume = effectiveVolume;
+        if (youtubePlayerRef.current) youtubePlayerRef.current.setVolume(Math.round(effectiveVolume * 100));
         try {
             window.localStorage.setItem(volumeStorageKey, String(volume));
         } catch (error) {
             console.error('No se pudo guardar el volumen:', error);
         }
-    }, [volume]);
+    }, [isMuted, volume]);
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(mutedStorageKey, String(isMuted));
+        } catch (error) {
+            console.error('No se pudo guardar la preferencia de silencio:', error);
+        }
+    }, [isMuted]);
 
     useEffect(() => {
         repeatModeRef.current = repeatMode;
@@ -208,7 +232,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
         const newAudio = new Audio();
         newAudio.preload = 'metadata';
-        newAudio.volume = volumeRef.current;
+        newAudio.volume = isMutedRef.current ? 0 : volumeRef.current;
         audioRef.current = newAudio;
         let restoredPosition = false;
         let trackEnded = false;
@@ -342,7 +366,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 events: {
                     onReady: ({ target }) => {
                         target.getIframe().title = `Reproduciendo ${trackTitle}`;
-                        target.setVolume(Math.round(volumeRef.current * 100));
+                        target.setVolume(Math.round((isMutedRef.current ? 0 : volumeRef.current) * 100));
                         const savedPosition = loadPlaybackPosition(trackId);
                         const videoDuration = target.getDuration();
                         if (savedPosition > 0 && (!videoDuration || savedPosition < videoDuration - 2)) {
@@ -515,6 +539,15 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         }
     };
 
+    const toggleMute = () => {
+        if (isMuted || volume === 0) {
+            if (volume === 0) setVolume(lastNonzeroVolumeRef.current);
+            setIsMuted(false);
+        } else {
+            setIsMuted(true);
+        }
+    };
+
     const formatTime = (time: number) => {
         if (!Number.isFinite(time) || time < 0) return '0:00';
         const totalSeconds = Math.floor(time);
@@ -566,19 +599,14 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     <div className={`youtube-player-host${isVideoVisible ? '' : ' is-visually-hidden'}`} ref={youtubeContainerRef} />
                     {isVideoVisible ? (
                         <>
-                            <p className="player-note" role={youtubePlayerError?.trackId === currentTrackId ? 'alert' : undefined}>
-                                {youtubePlayerError?.trackId === currentTrackId
-                                    ? youtubePlayerError.message
-                                    : 'Usa los controles oficiales de YouTube para reproducir o pausar.'}
-                            </p>
+                            {youtubePlayerError?.trackId === currentTrackId && (
+                                <p className="player-note" role="alert">{youtubePlayerError.message}</p>
+                            )}
                         </>
                     ) : (
                         <div className="youtube-hidden-placeholder" role="status">
                             <span className="placeholder-play" aria-hidden="true">Ⅱ</span>
                             <strong>{isPlaying ? 'Reproducción en curso' : 'Video oculto'}</strong>
-                            <p>{isPlaying
-                                ? 'El audio sigue reproduciéndose. El video está oculto.'
-                                : 'El video está oculto. La reproducción se controla desde los botones inferiores.'}</p>
                         </div>
                     )}
                     {youtubePlaybackNotice && (
@@ -615,20 +643,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         <span>{formatTime(duration || song.getDuration())}</span>
                     </div>
                 </div>
-                <label className="audio-volume">
-                    <span>Volumen <output>{Math.round(volume * 100)}%</output></span>
-                    <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={volume}
-                        aria-label="Volumen"
-                        aria-valuetext={`${Math.round(volume * 100)}%`}
-                        onChange={(event) => setVolume(Number(event.target.value))}
-                    />
-                </label>
-                <p className="player-shortcuts">Atajos: Espacio reproducir/pausar · ← anterior · → siguiente</p>
             </div>
 
             <div className="player-actions">
@@ -695,6 +709,46 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                         <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
                     </svg>
                 </button>
+
+                <div className="volume-control">
+                    <button
+                        className="icon-button mode-button volume-toggle"
+                        type="button"
+                        onClick={toggleMute}
+                        aria-label={isMuted || volume === 0 ? 'Activar sonido' : 'Silenciar'}
+                        aria-pressed={isMuted || volume === 0}
+                        title={isMuted || volume === 0 ? 'Activar sonido' : 'Silenciar'}
+                    >
+                        {isMuted || volume === 0 ? (
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M11 5 6 9H3v6h3l5 4V5ZM17 9l5 6m0-6-5 6" />
+                            </svg>
+                        ) : (
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M11 5 6 9H3v6h3l5 4V5ZM15.5 8.5a5 5 0 0 1 0 7m3-10a9 9 0 0 1 0 13" />
+                            </svg>
+                        )}
+                    </button>
+                    <div className="volume-slider-popover">
+                        <label className="audio-volume">
+                            <span>Volumen <output>{Math.round(volume * 100)}%</output></span>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={volume}
+                                aria-label="Volumen"
+                                aria-valuetext={`${Math.round(volume * 100)}%`}
+                                onChange={(event) => {
+                                    const nextVolume = Number(event.target.value);
+                                    setVolume(nextVolume);
+                                    if (nextVolume > 0) setIsMuted(false);
+                                }}
+                            />
+                        </label>
+                    </div>
+                </div>
             </div>
         </section>
     );
