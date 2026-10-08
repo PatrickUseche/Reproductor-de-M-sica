@@ -54,10 +54,10 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 - **Repetición:** elige entre desactivada, repetir la playlist o repetir la canción actual. En el modo playlist, al terminar la última pista se vuelve a la primera.
 - **Aleatorio:** activa la reproducción aleatoria para recorrer las pistas sin cambiar el orden visible ni el orden guardado de la playlist.
 - **Búsqueda de YouTube:** escribe al menos tres caracteres; la búsqueda espera un segundo después de que dejes de escribir y reutiliza resultados recientes en memoria durante 30 minutos para reducir solicitudes. Haz clic en la miniatura o el título para añadir el video y reproducirlo; **Añadir a la lista** lo incorpora sin cambiar la pista seleccionada.
-- **Lista:** busca por título o artista y selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista completa.
+- **Lista:** busca por título o artista y selecciona una tarjeta para hacerla la pista actual; **Anterior** y **Siguiente** navegan por la lista completa. Si YouTube informa que un video no se puede reproducir, el reproductor intenta omitirlo y continuar con la siguiente canción.
 - **Cuenta:** crea una cuenta o inicia sesión para cargar y guardar la playlist personal en Supabase. El orden y la canción seleccionada se restauran al volver a iniciar sesión y los cambios se sincronizan en vivo entre sesiones abiertas.
 - Los archivos arrastrados se guardan solo en IndexedDB del navegador actual: no se suben a Supabase ni están disponibles en otros dispositivos o navegadores. Al restaurar la aplicación, se añaden después de las pistas sincronizadas con Supabase. Borrar los datos del sitio o del navegador puede eliminarlos.
-- Los controles de YouTube son los que proporciona el propio reproductor. No todos los videos permiten reproducción incrustada; también pueden aplicar restricciones regionales, de edad o del propietario.
+- Los controles de YouTube son los que proporciona el propio reproductor. No todos los videos permiten reproducción incrustada; también pueden aplicar restricciones regionales, de edad o del propietario. Cuando YouTube notifica un error de reproducción, la aplicación muestra la causa y trata de avanzar a la siguiente canción.
 
 ## Estructura del código
 

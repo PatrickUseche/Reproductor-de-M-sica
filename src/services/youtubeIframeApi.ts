@@ -31,7 +31,7 @@ export interface YouTubeIframeApi {
       events: {
         onReady: (event: { target: YouTubePlayer }) => void;
         onStateChange: (event: YouTubePlayerEvent) => void;
-        onError: () => void;
+        onError: (event: { data: number; target: YouTubePlayer }) => void;
       };
     },
   ) => YouTubePlayer;

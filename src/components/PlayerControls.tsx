@@ -89,6 +89,24 @@ const repeatModeLabels: Record<RepeatMode, string> = {
     track: 'Canción',
 };
 
+function getYouTubePlaybackErrorMessage(errorCode: number) {
+    switch (errorCode) {
+        case 2:
+            return 'El identificador de este video no es válido.';
+        case 5:
+            return 'YouTube no pudo reproducir este video en el reproductor HTML5.';
+        case 100:
+            return 'Este video fue eliminado, es privado o no está disponible.';
+        case 101:
+        case 150:
+            return 'El propietario del video no permite reproducirlo fuera de YouTube.';
+        case 153:
+            return 'YouTube rechazó la reproducción por una configuración de referencia del sitio.';
+        default:
+            return 'YouTube no pudo reproducir este video.';
+    }
+}
+
 /**
  * Reproduce audio directo con `HTMLAudioElement` y delega los videos de YouTube
  * al reproductor oficial incrustado.
@@ -143,6 +161,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     const currentTrackIdRef = useRef(currentTrackId);
     const lastPositionWriteRef = useRef(0);
     const [youtubePlayerError, setYoutubePlayerError] = useState<{ trackId: string; message: string } | null>(null);
+    const [youtubePlaybackNotice, setYoutubePlaybackNotice] = useState<string | null>(null);
 
     useEffect(() => {
         isPlayingRef.current = isPlaying;
@@ -333,6 +352,8 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     onStateChange: ({ data }) => {
                         if (data === api.PlayerState.PLAYING) {
                             trackEnded = false;
+                            setYoutubePlayerError(null);
+                            setYoutubePlaybackNotice(null);
                             setIsPlaying(true);
                             return;
                         }
@@ -363,11 +384,24 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                             setIsPlaying(false);
                         }
                     },
-                    onError: () => {
+                    onError: ({ data }) => {
+                        if (cancelled || trackEnded) return;
+                        trackEnded = true;
+                        const errorMessage = getYouTubePlaybackErrorMessage(data);
+                        const didAdvance = onNextRef.current(false, shuffleEnabledRef.current);
                         setYoutubePlayerError({
                             trackId,
-                            message: 'Este video no se puede reproducir aquí. Prueba otra canción.',
+                            message: didAdvance
+                                ? `${errorMessage} Se omitió «${trackTitle}» y se intentará reproducir la siguiente canción.`
+                                : `${errorMessage} No hay otra canción disponible; prueba con Siguiente.`,
                         });
+                        setYoutubePlaybackNotice(didAdvance
+                            ? `Se omitió «${trackTitle}». ${errorMessage}`
+                            : null);
+                        if (!didAdvance) {
+                            player?.pauseVideo();
+                            setIsPlaying(false);
+                        }
                     },
                 },
             });
@@ -546,6 +580,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                                 ? 'El audio sigue reproduciéndose. El video está oculto.'
                                 : 'El video está oculto. La reproducción se controla desde los botones inferiores.'}</p>
                         </div>
+                    )}
+                    {youtubePlaybackNotice && (
+                        <p className="player-note" role="status">{youtubePlaybackNotice}</p>
                     )}
                 </div>
             ) : null}
