@@ -6,7 +6,7 @@ interface YouTubeSearchProps {
   onPlaySong: (video: YouTubeVideo) => void;
 }
 
-/** Busca videos musicales y permite agregarlos a la playlist. */
+/** Searches for music videos and lets users add them to the playlist. */
 export function YouTubeSearch({ onAddSong, onPlaySong }: YouTubeSearchProps) {
   const [query, setQuery] = useState('');
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);

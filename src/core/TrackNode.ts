@@ -1,6 +1,6 @@
 import { Song } from "../types/Song"
 
-/** Nodo de una lista doblemente enlazada que contiene una canción. */
+/** A doubly linked list node containing a song. */
 export class TrackNode{
     content: Song;
     nextSong: TrackNode | null;

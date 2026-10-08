@@ -46,6 +46,7 @@ declare global {
 
 let apiLoadPromise: Promise<YouTubeIframeApi> | null = null;
 
+/** Loads the YouTube IFrame API once and shares its promise between callers. */
 export function loadYouTubeIframeApi(): Promise<YouTubeIframeApi> {
   if (window.YT?.Player) return Promise.resolve(window.YT);
   if (apiLoadPromise) return apiLoadPromise;

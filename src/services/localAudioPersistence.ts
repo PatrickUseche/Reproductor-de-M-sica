@@ -57,6 +57,7 @@ function transactionComplete(transaction: IDBTransaction): Promise<void> {
   });
 }
 
+/** Stores a user's local audio blobs and metadata in IndexedDB. */
 export async function saveLocalAudio(userId: string, files: LocalAudioFile[]): Promise<void> {
   if (files.length === 0) return;
 
@@ -82,6 +83,7 @@ export async function saveLocalAudio(userId: string, files: LocalAudioFile[]): P
   await completion;
 }
 
+/** Restores a user's local audio records and creates playable object URLs. */
 export async function loadLocalAudio(userId: string): Promise<Song[]> {
   const database = await openDatabase();
   const transaction = database.transaction(audioStoreName, 'readonly');
@@ -106,6 +108,7 @@ export async function loadLocalAudio(userId: string): Promise<Song[]> {
     ));
 }
 
+/** Deletes one user's local audio record from IndexedDB. */
 export async function deleteLocalAudio(userId: string, songId: string): Promise<void> {
   const database = await openDatabase();
   const transaction = database.transaction(audioStoreName, 'readwrite');

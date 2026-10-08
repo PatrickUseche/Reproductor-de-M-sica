@@ -1,6 +1,6 @@
 /**
- * Datos de una pista reproducible desde una URL directa o desde YouTube.
- * Para canciones de YouTube, `audioUrl` almacena el ID del video.
+ * Data for a track playable from a direct URL or YouTube.
+ * For YouTube tracks, `audioUrl` stores the video ID.
  */
 export class Song{
     private _id: string;
@@ -27,37 +27,37 @@ export class Song{
 
     }
 
-    /** Identificador único usado, entre otros lugares, como clave de React. */
+    /** Unique identifier, also used as a React key. */
     getId() {
         return this._id;
     }
 
-    /** Título visible de la pista. */
+    /** Track title displayed in the interface. */
     getTitle(){
         return this._title;
     }
 
-    /** Nombre del artista o canal que aporta la pista. */
+    /** Name of the artist or channel providing the track. */
     getArtist(){
         return this._artist;
     }
 
-    /** Duración en segundos; puede ser cero para resultados de YouTube. */
+    /** Duration in seconds; may be zero for YouTube search results. */
     getDuration(){
         return this._duration;
     }
 
-    /** URL de audio directo o, para YouTube, el ID del video. */
+    /** Direct audio URL or, for YouTube, the video ID. */
     getAudioUrl(){
         return this._audioUrl;
     }
 
-    /** Devuelve el proveedor que debe usar el reproductor. */
+    /** Returns the source used by the player. */
     getSource(){
         return this._source;
     }
 
-    /** Devuelve el ID de YouTube o `null` si la pista es audio directo. */
+    /** Returns the YouTube ID, or `null` for direct audio tracks. */
     getYoutubeVideoId(){
         return this._source === 'youtube' ? this._audioUrl : null;
     }

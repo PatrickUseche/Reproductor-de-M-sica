@@ -65,13 +65,13 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 | Ruta | Responsabilidad |
 | --- | --- |
 | `src/main.tsx` | Punto de entrada de React y montaje de la aplicación. |
-| `src/App.tsx` | Conecta la playlist, el reproductor, los formularios y la búsqueda. |
-| `src/types/Song.ts` | Modelo de canción; distingue audio normal de videos de YouTube. |
-| `src/core/TrackNode.ts` | Nodo con enlaces anterior/siguiente para la lista doblemente enlazada. |
-| `src/core/SongPlaylist.ts` | Operaciones de inserción, eliminación y navegación de la lista. |
+| `src/App.tsx` | Coordina la playlist, la autenticación, la sincronización, el reproductor y la búsqueda. |
+| `src/types/Song.ts` | Modelo de pista; distingue audio local y videos de YouTube. |
+| `src/core/TrackNode.ts` | Nodo de la lista doblemente enlazada, con referencias anterior y siguiente. |
+| `src/core/SongPlaylist.ts` | Operaciones de inserción, eliminación, reordenamiento y navegación de la lista. |
 | `src/components/PlayerControls.tsx` | Reproducción de audio directo y reproductor de YouTube con avance al finalizar. |
-| `src/components/SongForm.tsx` | Formulario para agregar o eliminar canciones manualmente. |
-| `src/components/PlaylistView.tsx` | Vista visual de nodos, cabeza, cola y selección actual. |
+| `src/components/SongForm.tsx` | Importación y validación de archivos de audio locales. |
+| `src/components/PlaylistView.tsx` | Vista de la playlist, búsqueda, selección y reordenamiento de pistas. |
 | `src/components/YouTubeSearch.tsx` | Formulario de búsqueda, resultados y acciones para añadir canciones. |
 | `src/services/youtube.ts` | Solicitud a YouTube Data API v3 y manejo de respuesta. |
 | `src/services/supabase.ts` | Configuración del cliente Supabase desde variables de entorno. |
@@ -82,6 +82,14 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 | `supabase/realtime.sql` | Habilita notificaciones en vivo para la tabla de playlists. |
 | `src/index.css` | Estilos globales. |
 
+### Estructura de datos
+
+La playlist se implementa como una **lista doblemente enlazada**. Cada `TrackNode` contiene una pista y dos referencias: `previousSong` y `nextSong`. `SongPlaylist` mantiene referencias a la cabeza, la cola y la pista actual, además del tamaño de la lista. Esta estructura permite recorrer la playlist en ambos sentidos y actualizar enlaces al insertar, eliminar o reordenar nodos. Las posiciones de las operaciones basadas en índice comienzan en cero.
+
+### Idioma y documentación
+
+Los nombres de clases, métodos, variables y comentarios del código fuente están en inglés. La interfaz y este README están en español para los usuarios del producto.
+
 ## Comandos
 
 ```powershell
@@ -90,6 +98,8 @@ npm run build    # Verificación TypeScript y compilación de producción
 npm run lint     # Revisión estática con ESLint
 npm run preview  # Vista previa del build
 ```
+
+No hay actualmente un ejecutor ni una suite de pruebas automatizadas configurados; antes de la entrega se pueden ejecutar `npm run build` y `npm run lint`.
 
 ## Seguridad de API keys
 

@@ -2,8 +2,8 @@ import { Song } from "../types/Song";
 import { TrackNode } from "./TrackNode";
 
 /**
- * Lista doblemente enlazada de canciones con referencias a cabeza, cola
- * y pista actual. Las posiciones usan índices desde cero.
+ * A doubly linked list of songs with references to its head, tail, and
+ * current track. Positions use zero-based indices.
  */
 export class SongPlaylist{
     private _head: TrackNode | null;
@@ -18,27 +18,27 @@ export class SongPlaylist{
         this._size = 0;
     }
 
-    /** Devuelve el primer nodo o `null` cuando la lista está vacía. */
+    /** Returns the first node, or `null` if the list is empty. */
     getHead(){
         return this._head;
     }
 
-    /** Devuelve el último nodo o `null` cuando la lista está vacía. */
+    /** Returns the last node, or `null` if the list is empty. */
     getTail(){
         return this._tail;
     }
 
-    /** Devuelve el nodo seleccionado actualmente. */
+    /** Returns the currently selected node. */
     getCurrent(){
         return this._current;
     }
 
-    /** Devuelve el número de canciones de la lista. */
+    /** Returns the number of songs in the list. */
     getSize(){
         return this._size;
     }
 
-    /** Inserta una canción al comienzo sin cambiar la pista actual. */
+    /** Inserts a song at the beginning without changing the current track. */
     insertAtStart(song: Song){
         const newNode: TrackNode = new TrackNode(song);
         if (this._head === null){
@@ -52,7 +52,7 @@ export class SongPlaylist{
         this._size++;
     }
 
-    /** Inserta una canción al final sin cambiar la pista actual. */
+    /** Inserts a song at the end without changing the current track. */
     insertAtEnd(song: Song){
         const newNode: TrackNode = new TrackNode(song);
         if (this._tail === null){
@@ -66,7 +66,7 @@ export class SongPlaylist{
         this._size++;
     }
 
-    /** Inserta en el índice indicado; devuelve `false` si queda fuera de rango. */
+    /** Inserts at the given index; returns `false` if the index is out of range. */
     insertAtPosition(song: Song, position: number){
         if (position < 0 || position > this._size){
             console.log("Posición fuera de rango.");
@@ -98,7 +98,7 @@ export class SongPlaylist{
         return true;
     }
 
-    /** Elimina la cabeza y devuelve `false` si la lista ya estaba vacía. */
+    /** Removes the head and returns `false` if the list is already empty. */
     deleteAtStart(){
         if(this._size === 0){
             console.log("La lista de reproducción esta vacia.")
@@ -131,7 +131,7 @@ export class SongPlaylist{
         return true;
     }
 
-    /** Elimina la cola y devuelve `false` si la lista ya estaba vacía. */
+    /** Removes the tail and returns `false` if the list is already empty. */
     deleteAtEnd(){
         if(this._size === 0){
             console.log("La lista de reproducción esta vacia.")
@@ -164,7 +164,7 @@ export class SongPlaylist{
         return true;
     }
 
-    /** Elimina el nodo del índice indicado; devuelve `false` si no existe. */
+    /** Removes the node at the given index; returns `false` if it does not exist. */
     deleteAtPosition(position: number){
         if(position < 0 || position >= this._size){
             console.log("Posición fuera de rango.")
@@ -207,7 +207,7 @@ export class SongPlaylist{
         return true;
     }
 
-    /** Mueve una canción una posición arriba (`-1`) o abajo (`1`). */
+    /** Moves a song up (`-1`) or down (`1`) by one position. */
     moveAtPosition(position: number, direction: -1 | 1){
         if (!Number.isInteger(position) || position < 0 || position >= this._size){
             return false;
@@ -255,7 +255,7 @@ export class SongPlaylist{
         return true;
     }
 
-    /** Mueve una canción a la posición indicada, manteniendo las referencias de la lista. */
+    /** Moves a song to the given position while maintaining the list links. */
     moveToPosition(fromPosition: number, toPosition: number){
         if (!Number.isInteger(fromPosition) || !Number.isInteger(toPosition)
             || fromPosition < 0 || fromPosition >= this._size
@@ -271,7 +271,7 @@ export class SongPlaylist{
         return true;
     }
 
-    /** Avanza una posición; se mantiene en la cola al llegar al final. */
+    /** Advances one position and stays at the tail when it reaches the end. */
     playNext(){
         if (this._current === null) {
             this._current = this._head;
@@ -280,7 +280,7 @@ export class SongPlaylist{
         this._current = this._current.nextSong ?? this._current;
     }
 
-    /** Retrocede una posición; se mantiene en la cabeza al llegar al inicio. */
+    /** Moves back one position and stays at the head when it reaches the beginning. */
     playPrevious(){
         if(this._current === null){
             this._current = this._tail;
@@ -289,7 +289,7 @@ export class SongPlaylist{
         this._current = this._current.previousSong ?? this._current;
     }
 
-    /** Devuelve los nodos en orden para renderizar la lista en React. */
+    /** Returns the nodes in order for rendering the list in React. */
     toArray(): TrackNode[]{
         const nodes: TrackNode[] = [];
         let current = this._head;
@@ -300,12 +300,12 @@ export class SongPlaylist{
         return nodes;
     }
 
-    /** Establece el nodo actual, o limpia la selección con `null`. */
+    /** Sets the current node, or clears the selection with `null`. */
     setCurrentNode(node: TrackNode | null){
         this._current = node;
     }
 
-    /** Reemplaza el contenido de la lista y restaura la pista seleccionada por ID. */
+    /** Replaces the list contents and restores the selected track by ID. */
     replaceAll(songs: Song[], currentSongId: string | null = null){
         this._head = null;
         this._tail = null;

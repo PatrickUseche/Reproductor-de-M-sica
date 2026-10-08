@@ -74,8 +74,8 @@ function getYouTubePlaybackErrorMessage(errorCode: number) {
 }
 
 /**
- * Reproduce audio directo con `HTMLAudioElement` y delega los videos de YouTube
- * al reproductor oficial incrustado.
+ * Plays direct audio with `HTMLAudioElement` and delegates YouTube videos
+ * to the official embedded player.
  */
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
     currentTrack,
@@ -86,7 +86,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     onNext,
     onPrevious,
 }) => {
-    // Estado para la interfaz (Play / Pausa).
+    // Playback state shown in the interface.
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
     const [playbackProgress, setPlaybackProgress] = useState<{
         trackId: string | null;
@@ -118,7 +118,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             ? savedDuration
             : 0;
 
-    // Referencia para mantener una unica instancia del objeto Audio.
+    // Keep a single `Audio` instance for the current track.
     const audioRef = useRef<HTMLAudioElement | null >(null);
     const volumeRef = useRef(volume);
     const isMutedRef = useRef(isMuted);
@@ -178,7 +178,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         shuffleEnabledRef.current = shuffleEnabled;
     }, [shuffleEnabled]);
 
-    // EFECTO: Se ejecuta cada vez que cambia la cancion seleccionada (_current).
+    // Create and manage the audio element whenever the selected track changes.
     useEffect(() => {
         if (!currentTrack) {
             if (audioRef.current) {

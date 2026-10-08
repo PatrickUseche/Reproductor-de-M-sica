@@ -11,7 +11,7 @@ interface PlaylistViewProps {
   onMoveSong: (fromPosition: number, toPosition: number) => void;
 }
 
-/** Representa los enlaces y la selección actual de la lista doblemente enlazada. */
+/** Renders the doubly linked list and its current selection. */
 export const PlaylistView: React.FC<PlaylistViewProps> = ({
   nodes,
   headNode,

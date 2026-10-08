@@ -127,8 +127,8 @@ function ThemeToggle({ theme, onToggle }: { theme: ColorTheme; onToggle: () => v
 }
 
 /**
- * Ensambla la interfaz y coordina las acciones sobre la playlist mutable.
- * `refresh` sincroniza React después de que una operación cambia los nodos.
+ * Composes the interface and coordinates operations on the mutable playlist.
+ * `refresh` synchronizes React after an operation changes the nodes.
  */
 export default function App() {
   const [playlist] = useState<SongPlaylist>(() => new SongPlaylist());
@@ -431,7 +431,7 @@ export default function App() {
     );
   }
 
-  /** Selecciona un nodo existente y actualiza el reproductor y la vista. */
+  /** Selects an existing node and updates the player and playlist view. */
   const handleSelectSong = (node: Parameters<SongPlaylist['setCurrentNode']>[0]) => {
     if (!node) return;
     playlist.setCurrentNode(node);
@@ -439,7 +439,7 @@ export default function App() {
     refresh();
   };
 
-  /** Convierte un resultado de YouTube al modelo de canción y lo agrega al final. */
+  /** Converts a YouTube search result to a song and appends it to the playlist. */
   const handleAddYouTubeSong = (video: YouTubeVideo) => {
     const song = new Song(
       crypto.randomUUID(),

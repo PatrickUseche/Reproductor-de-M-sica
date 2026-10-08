@@ -23,7 +23,7 @@ function isAudioFile(file: File) {
   return file.type.startsWith('audio/') || (!file.type && audioFileExtension.test(file.name));
 }
 
-/** Permite elegir archivos locales o soltarlos sobre el botón compacto. */
+/** Allows users to select local files or drop them onto the compact button. */
 export function SongForm({ onAddFiles }: SongFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);

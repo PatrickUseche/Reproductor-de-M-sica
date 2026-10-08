@@ -1,4 +1,4 @@
-/** Campos de YouTube Data API v3 que usa el buscador. */
+/** YouTube Data API v3 fields used by the search service. */
 export interface YouTubeVideo {
   id: {
     videoId: string;
@@ -17,7 +17,7 @@ export interface YouTubeVideo {
   };
 }
 
-/** Respuesta de búsqueda de YouTube con error opcional de la API. */
+/** YouTube search response, including an optional API error. */
 interface YouTubeSearchResponse {
   items?: YouTubeVideo[];
   error?: {
@@ -62,9 +62,9 @@ function cacheSearchResults(query: string, videos: YouTubeVideo[]) {
 }
 
 /**
- * Busca hasta diez videos de la categoría Música que permiten inserción.
- * Reutiliza resultados recientes y no vuelve a consultar si ya hay una respuesta
- * en caché para esta búsqueda. La clave se toma del entorno de Vite.
+ * Searches for up to ten embeddable videos in the Music category.
+ * Reuses recent results and skips the network request when this query is cached.
+ * The API key is read from the Vite environment.
  */
 export async function searchYouTubeSongs(query: string, signal?: AbortSignal): Promise<YouTubeVideo[]> {
   const cachedVideos = cachedVideosFor(query);
