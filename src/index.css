@@ -244,6 +244,29 @@ input::placeholder {
   padding-top: 22px;
 }
 
+.repeat-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.repeat-control select {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 7px 9px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+}
+
+.repeat-control select:focus-visible {
+  outline: 3px solid rgba(8, 126, 117, 0.28);
+  outline-offset: 2px;
+}
+
 .primary-button {
   color: #fff;
   background: var(--teal);

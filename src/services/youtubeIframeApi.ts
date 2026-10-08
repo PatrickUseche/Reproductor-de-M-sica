@@ -1,6 +1,8 @@
 export interface YouTubePlayer {
   destroy: () => void;
   getIframe: () => HTMLIFrameElement;
+  playVideo: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
 }
 
 export interface YouTubePlayerEvent {

@@ -4,9 +4,11 @@ import { loadYouTubeIframeApi, type YouTubePlayer } from "../services/youtubeIfr
 
 interface PlayerControlsProps{
     currentTrack: TrackNode | null;
-    onNext: () => boolean;
+    onNext: (repeatPlaylist?: boolean) => boolean;
     onPrevious: () => void;
 }
+
+type RepeatMode = 'off' | 'playlist' | 'track';
 
 /**
  * Reproduce audio directo con `HTMLAudioElement` y delega los videos de YouTube
@@ -22,6 +24,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [volume, setVolume] = useState(1);
+    const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
     const currentTrackId = currentTrack?.content.getId() ?? null;
     const youtubeVideoId = currentTrack?.content.getYoutubeVideoId() ?? null;
     const [previousTrackId, setPreviousTrackId] = useState(currentTrackId);
@@ -38,6 +41,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     // Referencia para mantener una unica instancia del objeto Audio.
     const audioRef = useRef<HTMLAudioElement | null >(null);
     const volumeRef = useRef(volume);
+    const repeatModeRef = useRef(repeatMode);
     const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
     const isPlayingRef = useRef(isPlaying);
     const onNextRef = useRef(onNext);
@@ -52,6 +56,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         volumeRef.current = volume;
         if (audioRef.current) audioRef.current.volume = volume;
     }, [volume]);
+
+    useEffect(() => {
+        repeatModeRef.current = repeatMode;
+    }, [repeatMode]);
 
     // EFECTO: Se ejecuta cada vez que cambia la cancion seleccionada (_current).
     useEffect(() => {
@@ -88,8 +96,28 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         newAudio.onplay = () => setIsPlaying(true);
         newAudio.onpause = () => setIsPlaying(false);
         newAudio.onended = () => {
+            const mode = repeatModeRef.current;
+            if (mode === 'track') {
+                newAudio.currentTime = 0;
+                void newAudio.play().catch((error: unknown) => {
+                    console.error('Error al repetir la pista:', error);
+                    setIsPlaying(false);
+                });
+                return;
+            }
             setCurrentTime(Number.isFinite(newAudio.duration) ? newAudio.duration : 0);
-            setIsPlaying(onNextRef.current());
+            const didAdvance = onNextRef.current(mode === 'playlist');
+            if (didAdvance) {
+                setIsPlaying(true);
+            } else if (mode === 'playlist') {
+                newAudio.currentTime = 0;
+                void newAudio.play().catch((error: unknown) => {
+                    console.error('Error al repetir la playlist:', error);
+                    setIsPlaying(false);
+                });
+            } else {
+                setIsPlaying(false);
+            }
         };
         updateDuration();
 
@@ -141,7 +169,21 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     },
                     onStateChange: ({ data }) => {
                         if (data !== api.PlayerState.ENDED) return;
-                        setIsPlaying(onNextRef.current());
+                        const mode = repeatModeRef.current;
+                        if (mode === 'track') {
+                            player?.seekTo(0, true);
+                            player?.playVideo();
+                            return;
+                        }
+                        const didAdvance = onNextRef.current(mode === 'playlist');
+                        if (didAdvance) {
+                            setIsPlaying(true);
+                        } else if (mode === 'playlist') {
+                            player?.seekTo(0, true);
+                            player?.playVideo();
+                        } else {
+                            setIsPlaying(false);
+                        }
                     },
                     onError: () => {
                         setYoutubePlayerError({
@@ -272,7 +314,25 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     </button>
                 )}
 
-                <button className="secondary-button" onClick={onNext} aria-label="Canción siguiente">Siguiente</button>
+                <label className="repeat-control">
+                    <span>Repetir</span>
+                    <select
+                        value={repeatMode}
+                        onChange={(event) => {
+                            const selectedMode = event.target.value;
+                            if (selectedMode === 'off' || selectedMode === 'playlist' || selectedMode === 'track') {
+                                setRepeatMode(selectedMode);
+                            }
+                        }}
+                        aria-label="Modo de repetición"
+                    >
+                        <option value="off">Desactivada</option>
+                        <option value="playlist">Playlist</option>
+                        <option value="track">Canción</option>
+                    </select>
+                </label>
+
+                <button className="secondary-button" onClick={() => onNext()} aria-label="Canción siguiente">Siguiente</button>
             </div>
         </section>
     );
