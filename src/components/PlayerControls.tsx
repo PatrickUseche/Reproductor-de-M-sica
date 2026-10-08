@@ -4,8 +4,10 @@ import { loadYouTubeIframeApi, type YouTubePlayer } from "../services/youtubeIfr
 
 interface PlayerControlsProps{
     currentTrack: TrackNode | null;
-    onNext: (repeatPlaylist?: boolean) => boolean;
-    onPrevious: () => void;
+    shuffleEnabled: boolean;
+    onToggleShuffle: () => void;
+    onNext: (repeatPlaylist?: boolean, shuffle?: boolean) => boolean;
+    onPrevious: (shuffle?: boolean) => void;
 }
 
 type RepeatMode = 'off' | 'playlist' | 'track';
@@ -16,6 +18,8 @@ type RepeatMode = 'off' | 'playlist' | 'track';
  */
 export const PlayerControls: React.FC<PlayerControlsProps> = ({
     currentTrack,
+    shuffleEnabled,
+    onToggleShuffle,
     onNext,
     onPrevious,
 }) => {
@@ -52,6 +56,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     const audioRef = useRef<HTMLAudioElement | null >(null);
     const volumeRef = useRef(volume);
     const repeatModeRef = useRef(repeatMode);
+    const shuffleEnabledRef = useRef(shuffleEnabled);
     const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
     const isPlayingRef = useRef(isPlaying);
     const onNextRef = useRef(onNext);
@@ -70,6 +75,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     useEffect(() => {
         repeatModeRef.current = repeatMode;
     }, [repeatMode]);
+
+    useEffect(() => {
+        shuffleEnabledRef.current = shuffleEnabled;
+    }, [shuffleEnabled]);
 
     // EFECTO: Se ejecuta cada vez que cambia la cancion seleccionada (_current).
     useEffect(() => {
@@ -137,7 +146,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                 currentTime: Number.isFinite(newAudio.duration) ? newAudio.duration : progress.currentTime,
                 duration: progress.duration,
             }));
-            const didAdvance = onNextRef.current(mode === 'playlist');
+            const didAdvance = onNextRef.current(mode === 'playlist', shuffleEnabledRef.current);
             if (didAdvance) {
                 setIsPlaying(true);
             } else if (mode === 'playlist') {
@@ -210,7 +219,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                             player?.playVideo();
                             return;
                         }
-                        const didAdvance = onNextRef.current(mode === 'playlist');
+                        const didAdvance = onNextRef.current(mode === 'playlist', shuffleEnabledRef.current);
                         if (didAdvance) {
                             setIsPlaying(true);
                         } else if (mode === 'playlist') {
@@ -342,7 +351,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             )}
 
             <div className="player-actions">
-                <button className="secondary-button" onClick={onPrevious} aria-label="Canción anterior">Anterior</button>
+                <button className="secondary-button" onClick={() => onPrevious(shuffleEnabled)} aria-label="Canción anterior">Anterior</button>
 
                 {!youtubeVideoId && (
                     <button
@@ -371,7 +380,17 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     </select>
                 </label>
 
-                <button className="secondary-button" onClick={() => onNext()} aria-label="Canción siguiente">Siguiente</button>
+                <button
+                    className={`shuffle-button${shuffleEnabled ? ' is-active' : ''}`}
+                    type="button"
+                    onClick={onToggleShuffle}
+                    aria-pressed={shuffleEnabled}
+                    aria-label={shuffleEnabled ? 'Desactivar reproducción aleatoria' : 'Activar reproducción aleatoria'}
+                >
+                    {shuffleEnabled ? '🔀 Aleatorio' : 'Aleatorio'}
+                </button>
+
+                <button className="secondary-button" onClick={() => onNext(false, shuffleEnabled)} aria-label="Canción siguiente">Siguiente</button>
             </div>
         </section>
     );

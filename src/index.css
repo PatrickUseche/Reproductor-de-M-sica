@@ -274,6 +274,17 @@ input::placeholder {
   outline-offset: 2px;
 }
 
+.shuffle-button {
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.shuffle-button.is-active {
+  border-color: #a8d5ca;
+  color: var(--teal-dark);
+  background: var(--teal-pale);
+}
+
 .primary-button {
   color: #fff;
   background: var(--teal);
@@ -722,6 +733,23 @@ input::placeholder {
 
 .audio-dropzone > span:last-child {
   font-size: 12px;
+}
+
+.audio-import-progress {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin-top: 12px;
+  accent-color: var(--teal);
+}
+
+.audio-import-progress:not([value]) {
+  accent-color: var(--teal);
+}
+
+.form-error {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .audio-drop-icon {

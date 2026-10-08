@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AccountAccess } from './components/AccountAccess';
 import { PlayerControls } from './components/PlayerControls';
 import { PlaylistView } from './components/PlaylistView';
-import { SongForm } from './components/SongForm';
+import { SongForm, type AudioFileFailure, type AudioFileImportResult } from './components/SongForm';
 import { YouTubeSearch } from './components/YouTubeSearch';
 import { SongPlaylist } from './core/SongPlaylist';
 import {
@@ -52,6 +52,24 @@ function restoreRemotePlaylist(playlist: SongPlaylist, snapshot: PlaylistSnapsho
   );
 }
 
+function shuffledTrackIdsForIds(ids: string[]): string[] {
+  const shuffledIds = [...ids];
+  for (let index = shuffledIds.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffledIds[index], shuffledIds[swapIndex]] = [shuffledIds[swapIndex], shuffledIds[index]];
+  }
+
+  return shuffledIds;
+}
+
+function shuffledTrackIds(playlist: SongPlaylist, excludedId: string | null): string[] {
+  const ids = playlist.toArray()
+    .map((node) => node.content.getId())
+    .filter((id) => id !== excludedId);
+
+  return shuffledTrackIdsForIds(ids);
+}
+
 /**
  * Ensambla la interfaz y coordina las acciones sobre la playlist mutable.
  * `refresh` sincroniza React después de que una operación cambia los nodos.
@@ -69,15 +87,41 @@ export default function App() {
   const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [syncError, setSyncError] = useState('');
   const [localAudioError, setLocalAudioError] = useState('');
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const saveRevision = useRef(0);
   const playlistDirtyRef = useRef(false);
   const syncStatusRef = useRef(syncStatus);
+  const shuffleQueueRef = useRef<string[]>([]);
+  const shuffleHistoryRef = useRef<string[]>([]);
   const refresh = () => {
     playlistDirtyRef.current = true;
     setVersion((currentVersion) => currentVersion + 1);
     setPlaylistDirty(true);
     setSyncError('');
+  };
+  const resetShuffleQueue = (currentTrackId: string | null) => {
+    shuffleQueueRef.current = shuffledTrackIds(playlist, currentTrackId);
+    shuffleHistoryRef.current = [];
+  };
+  const insertShuffleTrack = (trackId: string) => {
+    if (!shuffleEnabled || shuffleQueueRef.current.includes(trackId)) return;
+    const index = Math.floor(Math.random() * (shuffleQueueRef.current.length + 1));
+    shuffleQueueRef.current.splice(index, 0, trackId);
+  };
+  const removeShuffleTrack = (trackId: string) => {
+    shuffleQueueRef.current = shuffleQueueRef.current.filter((id) => id !== trackId);
+    shuffleHistoryRef.current = shuffleHistoryRef.current.filter((id) => id !== trackId);
+  };
+  const toggleShuffle = () => {
+    const enabled = !shuffleEnabled;
+    setShuffleEnabled(enabled);
+    if (enabled) {
+      resetShuffleQueue(playlist.getCurrent()?.content.getId() ?? null);
+    } else {
+      shuffleQueueRef.current = [];
+      shuffleHistoryRef.current = [];
+    }
   };
 
   useEffect(() => {
@@ -107,6 +151,9 @@ export default function App() {
         playlistDirtyRef.current = false;
         setPlaylistDirty(false);
         setRealtimeStatus('connecting');
+        setShuffleEnabled(false);
+        shuffleQueueRef.current = [];
+        shuffleHistoryRef.current = [];
       }
       sessionUserId.current = nextUserId;
       setSession(nextSession);
@@ -149,6 +196,8 @@ export default function App() {
       }
       restorePlaylist(playlist, snapshot ?? { songs: [], currentSongId: null });
       for (const song of loadedLocalSongs) playlist.insertAtEnd(song);
+      shuffleQueueRef.current = [];
+      shuffleHistoryRef.current = [];
       setLoadedUserId(userId);
       setSyncStatus('saved');
       setLocalAudioError('');
@@ -276,7 +325,9 @@ export default function App() {
 
   /** Selecciona un nodo existente y actualiza el reproductor y la vista. */
   const handleSelectSong = (node: Parameters<SongPlaylist['setCurrentNode']>[0]) => {
+    if (!node) return;
     playlist.setCurrentNode(node);
+    if (shuffleEnabled) resetShuffleQueue(node.content.getId());
     refresh();
   };
 
@@ -291,6 +342,7 @@ export default function App() {
       'youtube',
     );
     playlist.insertAtEnd(song);
+    insertShuffleTrack(song.getId());
     refresh();
   };
 
@@ -315,6 +367,7 @@ export default function App() {
       playlist.setCurrentNode(playlist.getTail());
     }
 
+    if (shuffleEnabled) resetShuffleQueue(existingNode?.content.getId() ?? playlist.getTail()?.content.getId() ?? null);
     refresh();
   };
 
@@ -354,9 +407,50 @@ export default function App() {
       <section className="listening-layout" aria-label="Reproductor y lista de reproducción">
         <PlayerControls
           currentTrack={playlist.getCurrent()}
-          onNext={(repeatPlaylist = false) => {
+          shuffleEnabled={shuffleEnabled}
+          onToggleShuffle={toggleShuffle}
+          onNext={(repeatPlaylist = false, shuffle = false) => {
             const currentTrack = playlist.getCurrent();
             if (!currentTrack) return false;
+            if (shuffle) {
+              const nodes = playlist.toArray();
+              const existingIds = new Set(nodes.map((node) => node.content.getId()));
+              const visitedIds = new Set(shuffleHistoryRef.current);
+              const queuedIds = new Set(shuffleQueueRef.current);
+              const unqueuedIds = nodes
+                .map((node) => node.content.getId())
+                .filter((id) => id !== currentTrack.content.getId()
+                  && !visitedIds.has(id)
+                  && !queuedIds.has(id));
+              for (const id of shuffledTrackIdsForIds(unqueuedIds)) {
+                const index = Math.floor(Math.random() * (shuffleQueueRef.current.length + 1));
+                shuffleQueueRef.current.splice(index, 0, id);
+              }
+
+              let nextId: string | undefined;
+              while (shuffleQueueRef.current.length > 0 && !nextId) {
+                const candidateId = shuffleQueueRef.current.shift();
+                if (candidateId && candidateId !== currentTrack.content.getId() && existingIds.has(candidateId)) {
+                  nextId = candidateId;
+                }
+              }
+
+              if (!nextId && repeatPlaylist && nodes.length > 1) {
+                shuffleQueueRef.current = shuffledTrackIds(playlist, currentTrack.content.getId());
+                nextId = shuffleQueueRef.current.shift();
+                shuffleHistoryRef.current = [];
+              }
+              if (!nextId) return false;
+
+              shuffleHistoryRef.current.push(currentTrack.content.getId());
+              const nextNode = nodes.find((node) => node.content.getId() === nextId);
+              if (!nextNode) return false;
+              playlist.setCurrentNode(nextNode);
+              refresh();
+              return true;
+            }
+
+            shuffleHistoryRef.current = [];
             if (currentTrack === playlist.getTail()) {
               const head = playlist.getHead();
               if (!repeatPlaylist || !head || head === currentTrack) return false;
@@ -368,7 +462,29 @@ export default function App() {
             refresh();
             return true;
           }}
-          onPrevious={() => { playlist.playPrevious(); refresh(); }}
+          onPrevious={(shuffle = false) => {
+            const currentTrack = playlist.getCurrent();
+            if (shuffle && currentTrack) {
+              let previousId = shuffleHistoryRef.current.pop();
+              const nodes = playlist.toArray();
+              while (previousId && !nodes.some((node) => node.content.getId() === previousId)) {
+                previousId = shuffleHistoryRef.current.pop();
+              }
+              if (previousId) {
+                const currentId = currentTrack.content.getId();
+                if (!shuffleQueueRef.current.includes(currentId)) shuffleQueueRef.current.unshift(currentId);
+                const previousNode = nodes.find((node) => node.content.getId() === previousId);
+                if (previousNode) {
+                  playlist.setCurrentNode(previousNode);
+                  refresh();
+                  return;
+                }
+              }
+            }
+            playlist.playPrevious();
+            if (shuffle) resetShuffleQueue(playlist.getCurrent()?.content.getId() ?? null);
+            refresh();
+          }}
         />
 
         <PlaylistView
@@ -386,6 +502,7 @@ export default function App() {
               const currentPosition = playlist.toArray()
                 .findIndex((node) => node.content.getId() === song.getId());
               if (currentPosition < 0 || !playlist.deleteAtPosition(currentPosition)) return;
+              removeShuffleTrack(song.getId());
               if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
               refresh();
             };
@@ -409,40 +526,67 @@ export default function App() {
 
       <section className="library-tools" aria-label="Administrar música">
         <SongForm
-          onAddFiles={async (files) => {
-            const songs = await Promise.all(files.map(async (file) => {
-              const audioUrl = URL.createObjectURL(file);
-              const audio = new Audio();
-              audio.preload = 'metadata';
-              const duration = await new Promise<number>((resolve) => {
-                const finish = (value: number) => {
-                  audio.onloadedmetadata = null;
-                  audio.onerror = null;
-                  audio.removeAttribute('src');
+          onAddFiles={async (files, onProgress): Promise<AudioFileImportResult> => {
+            let processed = 0;
+            const outcomes = await Promise.all(files.map(async (file) => {
+              let audioUrl: string | null = null;
+              try {
+                const createdAudioUrl = URL.createObjectURL(file);
+                audioUrl = createdAudioUrl;
+                const audio = new Audio();
+                audio.preload = 'metadata';
+                const duration = await new Promise<number>((resolve, reject) => {
+                  let timeoutId = 0;
+                  let settled = false;
+                  const finish = (error?: Error, loadedDuration = audio.duration) => {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timeoutId);
+                    audio.onloadedmetadata = null;
+                    audio.onerror = null;
+                    audio.removeAttribute('src');
+                    audio.load();
+                    if (error) reject(error);
+                    else resolve(Number.isFinite(loadedDuration) ? Math.round(loadedDuration) : 0);
+                  };
+                  audio.onloadedmetadata = () => finish(undefined, audio.duration);
+                  audio.onerror = () => finish(new Error(
+                    audio.error?.message || 'El navegador no pudo leer o reproducir el archivo.',
+                  ));
+                  timeoutId = window.setTimeout(() => finish(new Error(
+                    'El navegador tardó demasiado en leer el archivo.',
+                  )), 15000);
+                  audio.src = createdAudioUrl;
                   audio.load();
-                  resolve(Number.isFinite(value) ? Math.round(value) : 0);
+                });
+                const title = file.name.replace(/\.[^.]+$/, '') || file.name;
+                const song = new Song(crypto.randomUUID(), title, 'Archivo local', duration, createdAudioUrl);
+                await saveLocalAudio(session.user.id, [{ song, file }]);
+                return { song, failure: null };
+              } catch (error) {
+                if (audioUrl) URL.revokeObjectURL(audioUrl);
+                return {
+                  song: null,
+                  failure: {
+                    fileName: file.name,
+                    message: error instanceof Error ? error.message : 'No se pudo procesar el archivo.',
+                  } satisfies AudioFileFailure,
                 };
-                audio.onloadedmetadata = () => finish(audio.duration);
-                audio.onerror = () => finish(0);
-                audio.src = audioUrl;
-              });
-              const title = file.name.replace(/\.[^.]+$/, '') || file.name;
-              return new Song(crypto.randomUUID(), title, 'Archivo local', duration, audioUrl);
+              } finally {
+                processed += 1;
+                onProgress(processed, files.length);
+              }
             }));
 
-            try {
-              await saveLocalAudio(session.user.id, songs.map((song, index) => ({
-                song,
-                file: files[index],
-              })));
-            } catch (error) {
-              songs.forEach((song) => URL.revokeObjectURL(song.getAudioUrl()));
-              throw error;
-            }
-
-            songs.forEach((song) => playlist.insertAtEnd(song));
+            const songs = outcomes.flatMap(({ song }) => song ? [song] : []);
+            const failures = outcomes.flatMap(({ failure }) => failure ? [failure] : []);
+            songs.forEach((song) => {
+              playlist.insertAtEnd(song);
+              insertShuffleTrack(song.getId());
+            });
+            if (songs.length > 0) refresh();
             setLocalAudioError('');
-            refresh();
+            return { added: songs.length, failures };
           }}
         />
 
