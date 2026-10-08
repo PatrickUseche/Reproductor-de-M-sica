@@ -391,6 +391,72 @@ export default function App() {
     refresh();
   };
 
+  const handleAddLocalFiles = async (
+    files: File[],
+    onProgress: (processed: number, total: number) => void,
+  ): Promise<AudioFileImportResult> => {
+    let processed = 0;
+    const outcomes = await Promise.all(files.map(async (file) => {
+      let audioUrl: string | null = null;
+      try {
+        const createdAudioUrl = URL.createObjectURL(file);
+        audioUrl = createdAudioUrl;
+        const audio = new Audio();
+        audio.preload = 'metadata';
+        const duration = await new Promise<number>((resolve, reject) => {
+          let timeoutId = 0;
+          let settled = false;
+          const finish = (error?: Error, loadedDuration = audio.duration) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeoutId);
+            audio.onloadedmetadata = null;
+            audio.onerror = null;
+            audio.removeAttribute('src');
+            audio.load();
+            if (error) reject(error);
+            else resolve(Number.isFinite(loadedDuration) ? Math.round(loadedDuration) : 0);
+          };
+          audio.onloadedmetadata = () => finish(undefined, audio.duration);
+          audio.onerror = () => finish(new Error(
+            audio.error?.message || 'El navegador no pudo leer o reproducir el archivo.',
+          ));
+          timeoutId = window.setTimeout(() => finish(new Error(
+            'El navegador tardó demasiado en leer el archivo.',
+          )), 15000);
+          audio.src = createdAudioUrl;
+          audio.load();
+        });
+        const title = file.name.replace(/\.[^.]+$/, '') || file.name;
+        const song = new Song(crypto.randomUUID(), title, 'Archivo local', duration, createdAudioUrl);
+        await saveLocalAudio(session.user.id, [{ song, file }]);
+        return { song, failure: null };
+      } catch (error) {
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        return {
+          song: null,
+          failure: {
+            fileName: file.name,
+            message: error instanceof Error ? error.message : 'No se pudo procesar el archivo.',
+          } satisfies AudioFileFailure,
+        };
+      } finally {
+        processed += 1;
+        onProgress(processed, files.length);
+      }
+    }));
+
+    const songs = outcomes.flatMap(({ song }) => song ? [song] : []);
+    const failures = outcomes.flatMap(({ failure }) => failure ? [failure] : []);
+    songs.forEach((song) => {
+      playlist.insertAtEnd(song);
+      insertShuffleTrack(song.getId());
+    });
+    if (songs.length > 0) refresh();
+    setLocalAudioError('');
+    return { added: songs.length, failures };
+  };
+
   const userMetadata = session.user.user_metadata;
   const displayName = [
     userMetadata.full_name,
@@ -441,6 +507,7 @@ export default function App() {
               </span>
               {syncError && <p className="sync-error" role="alert">{syncError}</p>}
             </div>
+            <SongForm onAddFiles={handleAddLocalFiles} />
             {syncStatus === 'error' && (
               <button className="secondary-button" type="button" onClick={() => setPlaylistDirty(true)}>Reintentar guardado</button>
             )}
@@ -448,6 +515,11 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      <YouTubeSearch
+        onAddSong={handleAddYouTubeSong}
+        onPlaySong={handlePlayYouTubeSong}
+      />
 
       <section className="listening-layout" aria-label="Reproductor y lista de reproducción">
         <PlayerControls
@@ -532,8 +604,7 @@ export default function App() {
           }}
         />
 
-        <div className="playlist-column">
-          <PlaylistView
+        <PlaylistView
             nodes={playlist.toArray()}
             headNode={playlist.getHead()}
             tailNode={playlist.getTail()}
@@ -568,83 +639,12 @@ export default function App() {
               if (playlist.moveToPosition(fromPosition, toPosition)) refresh();
             }}
           />
-          <PlaylistSuggestions
-            songs={playlist.toArray().map((node) => node.content)}
-            onAddSong={handleAddYouTubeSong}
-          />
-        </div>
-      </section>
-
-      <section className="library-tools" aria-label="Administrar música">
-        <SongForm
-          onAddFiles={async (files, onProgress): Promise<AudioFileImportResult> => {
-            let processed = 0;
-            const outcomes = await Promise.all(files.map(async (file) => {
-              let audioUrl: string | null = null;
-              try {
-                const createdAudioUrl = URL.createObjectURL(file);
-                audioUrl = createdAudioUrl;
-                const audio = new Audio();
-                audio.preload = 'metadata';
-                const duration = await new Promise<number>((resolve, reject) => {
-                  let timeoutId = 0;
-                  let settled = false;
-                  const finish = (error?: Error, loadedDuration = audio.duration) => {
-                    if (settled) return;
-                    settled = true;
-                    window.clearTimeout(timeoutId);
-                    audio.onloadedmetadata = null;
-                    audio.onerror = null;
-                    audio.removeAttribute('src');
-                    audio.load();
-                    if (error) reject(error);
-                    else resolve(Number.isFinite(loadedDuration) ? Math.round(loadedDuration) : 0);
-                  };
-                  audio.onloadedmetadata = () => finish(undefined, audio.duration);
-                  audio.onerror = () => finish(new Error(
-                    audio.error?.message || 'El navegador no pudo leer o reproducir el archivo.',
-                  ));
-                  timeoutId = window.setTimeout(() => finish(new Error(
-                    'El navegador tardó demasiado en leer el archivo.',
-                  )), 15000);
-                  audio.src = createdAudioUrl;
-                  audio.load();
-                });
-                const title = file.name.replace(/\.[^.]+$/, '') || file.name;
-                const song = new Song(crypto.randomUUID(), title, 'Archivo local', duration, createdAudioUrl);
-                await saveLocalAudio(session.user.id, [{ song, file }]);
-                return { song, failure: null };
-              } catch (error) {
-                if (audioUrl) URL.revokeObjectURL(audioUrl);
-                return {
-                  song: null,
-                  failure: {
-                    fileName: file.name,
-                    message: error instanceof Error ? error.message : 'No se pudo procesar el archivo.',
-                  } satisfies AudioFileFailure,
-                };
-              } finally {
-                processed += 1;
-                onProgress(processed, files.length);
-              }
-            }));
-
-            const songs = outcomes.flatMap(({ song }) => song ? [song] : []);
-            const failures = outcomes.flatMap(({ failure }) => failure ? [failure] : []);
-            songs.forEach((song) => {
-              playlist.insertAtEnd(song);
-              insertShuffleTrack(song.getId());
-            });
-            if (songs.length > 0) {
-              refresh();
-            }
-            setLocalAudioError('');
-            return { added: songs.length, failures };
-          }}
+        <PlaylistSuggestions
+          songs={playlist.toArray().map((node) => node.content)}
+          onAddSong={handleAddYouTubeSong}
         />
-
-        <YouTubeSearch onAddSong={handleAddYouTubeSong} onPlaySong={handlePlayYouTubeSong} />
       </section>
+
       {localAudioError && <p className="form-error" role="alert">{localAudioError}</p>}
     </main>
   );

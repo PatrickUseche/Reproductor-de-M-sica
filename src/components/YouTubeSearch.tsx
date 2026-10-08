@@ -47,8 +47,14 @@ export function YouTubeSearch({ onAddSong, onPlaySong }: YouTubeSearchProps) {
   };
 
   return (
-    <section className="tool-panel" aria-labelledby="youtube-search-title">
-      <h2 id="youtube-search-title">Buscar en YouTube</h2>
+    <section className="tool-panel youtube-search-panel" aria-labelledby="youtube-search-title">
+      <div className="youtube-search-heading">
+        <div>
+          <p className="eyebrow">DESCUBRE MÚSICA</p>
+          <h2 id="youtube-search-title">Buscar en YouTube</h2>
+        </div>
+        <span>Busca y añade canciones a tu playlist</span>
+      </div>
       <form className="youtube-search-form" onSubmit={handleSubmit}>
         <input
           type="search"

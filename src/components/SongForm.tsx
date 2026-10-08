@@ -23,7 +23,7 @@ function isAudioFile(file: File) {
   return file.type.startsWith('audio/') || (!file.type && audioFileExtension.test(file.name));
 }
 
-/** Permite elegir archivos locales o soltarlos en el panel compacto. */
+/** Permite elegir archivos locales o soltarlos sobre el botón compacto. */
 export function SongForm({ onAddFiles }: SongFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -78,9 +78,9 @@ export function SongForm({ onAddFiles }: SongFormProps) {
   };
 
   return (
-    <section
-      className={`tool-panel audio-import-panel${isDragging ? ' is-dragging' : ''}`}
-      aria-labelledby="song-form-title"
+    <div
+      className={`audio-import-widget${isDragging ? ' is-dragging' : ''}`}
+      aria-label="Agregar música local"
       aria-busy={isProcessing}
       onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }}
       onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; setIsDragging(true); }}
@@ -92,35 +92,34 @@ export function SongForm({ onAddFiles }: SongFormProps) {
       }}
       onDrop={handleDrop}
     >
-      <div className="audio-import-heading">
-        <div>
-          <h2 id="song-form-title">Música local</h2>
-          <p>Elige archivos o arrástralos aquí</p>
-        </div>
-        <button
-          className="add-audio-button"
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isProcessing}
-        >
-          <span aria-hidden="true">＋</span>
-          {isProcessing ? 'Procesando…' : 'Añadir'}
-        </button>
-        <input
-          ref={fileInputRef}
-          className="visually-hidden"
-          type="file"
-          accept="audio/*,.aac,.aif,.aiff,.flac,.m4a,.mp3,.oga,.ogg,.opus,.wav"
-          multiple
-          aria-label="Seleccionar archivos de audio"
-          onChange={(event) => {
-            const selectedFiles = Array.from(event.currentTarget.files ?? []);
-            event.currentTarget.value = '';
-            void handleFiles(selectedFiles);
-          }}
-        />
-      </div>
-      {isDragging && <p className="audio-drop-hint" role="status">Suelta los archivos para agregarlos</p>}
+      <button
+        className="add-audio-button"
+        type="button"
+        title="Añadir canciones locales"
+        aria-label={isProcessing ? 'Procesando archivos de audio' : 'Añadir canciones locales'}
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isProcessing}
+      >
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M11 2v11.1a3.2 3.2 0 1 1-2-3V5l8-2v10.1a3.2 3.2 0 1 1-2-3V2.5L11 4v-2Z" />
+          <path d="M3 6h3M4.5 4.5v3" />
+        </svg>
+        <span>{isProcessing ? 'Importando' : 'Audio'}</span>
+      </button>
+      <input
+        ref={fileInputRef}
+        className="visually-hidden"
+        type="file"
+        accept="audio/*,.aac,.aif,.aiff,.flac,.m4a,.mp3,.oga,.ogg,.opus,.wav"
+        multiple
+        aria-label="Seleccionar archivos de audio"
+        onChange={(event) => {
+          const selectedFiles = Array.from(event.currentTarget.files ?? []);
+          event.currentTarget.value = '';
+          void handleFiles(selectedFiles);
+        }}
+      />
+      {isDragging && <span className="audio-drop-hint" role="status">Suelta aquí</span>}
       {isProcessing && (
         <div className="audio-import-progress-wrap">
           <span>Procesando {progress.processed} de {progress.total}</span>
@@ -132,9 +131,8 @@ export function SongForm({ onAddFiles }: SongFormProps) {
           />
         </div>
       )}
-      <p className="audio-local-note">Los archivos se guardan solo en este navegador.</p>
-      {message && <p className="account-message" role="status">{message}</p>}
-      {error && <p className="form-error" role="alert">{error}</p>}
-    </section>
+      {message && <span className="audio-import-feedback" role="status">{message}</span>}
+      {error && <span className="audio-import-feedback is-error" role="alert">{error}</span>}
+    </div>
   );
 }

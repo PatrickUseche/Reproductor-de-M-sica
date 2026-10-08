@@ -133,7 +133,7 @@ export function PlaylistSuggestions({ songs, onAddSong }: PlaylistSuggestionsPro
           <h2 id="playlist-suggestions-title">Sugerencias</h2>
           <p className="suggestions-description">Selección aleatoria basada en todos los artistas de tu playlist.</p>
         </div>
-        <span>{songs.length} {songs.length === 1 ? 'canción' : 'canciones'} consideradas</span>
+        <span>{songs.length} en playlist</span>
       </div>
       {isLoading && <p className="suggestions-message" role="status">Buscando artistas y canciones similares…</p>}
       {!isLoading && error && <p className="form-error" role="alert">{error}</p>}
