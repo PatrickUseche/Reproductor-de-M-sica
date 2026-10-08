@@ -12,6 +12,16 @@ interface PlayerControlsProps{
 
 type RepeatMode = 'off' | 'playlist' | 'track';
 const repeatModes: RepeatMode[] = ['off', 'playlist', 'track'];
+const videoVisibilityStorageKey = 'music-player-youtube-video-visible';
+
+function loadVideoVisibilityPreference() {
+    try {
+        return window.localStorage.getItem(videoVisibilityStorageKey) !== 'false';
+    } catch (error) {
+        console.error('No se pudo leer la preferencia de visibilidad del video:', error);
+        return true;
+    }
+}
 
 const repeatModeLabels: Record<RepeatMode, string> = {
     off: 'Desactivada',
@@ -39,6 +49,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     }>({ trackId: null, currentTime: 0, duration: 0 });
     const [volume, setVolume] = useState(1);
     const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
+    const [isVideoVisible, setIsVideoVisible] = useState(loadVideoVisibilityPreference);
     const currentTrackId = currentTrack?.content.getId() ?? null;
     const youtubeVideoId = currentTrack?.content.getYoutubeVideoId() ?? null;
     const [previousTrackId, setPreviousTrackId] = useState(currentTrackId);
@@ -191,7 +202,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     useEffect(() => {
         const container = youtubeContainerRef.current;
-        if (!youtubeVideoId || !container || !currentTrack) return;
+        if (!isVideoVisible || !youtubeVideoId || !container || !currentTrack) return;
 
         let cancelled = false;
         let player: YouTubePlayer | null = null;
@@ -269,7 +280,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             if (youtubePlayerRef.current === player) youtubePlayerRef.current = null;
             container.replaceChildren();
         };
-    }, [currentTrack, currentTrackId, youtubeVideoId]);
+    }, [currentTrack, currentTrackId, isVideoVisible, youtubeVideoId]);
 
     const togglePlayPause = () => {
         if (!currentTrack) return;
@@ -293,6 +304,17 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     setIsPlaying(false);
                 });
         }
+    };
+
+    const toggleVideoVisibility = () => {
+        const nextVisibility = !isVideoVisible;
+        setIsVideoVisible(nextVisibility);
+        try {
+            window.localStorage.setItem(videoVisibilityStorageKey, String(nextVisibility));
+        } catch (error) {
+            console.error('No se pudo guardar la preferencia de visibilidad del video:', error);
+        }
+        if (!nextVisibility) setIsPlaying(false);
     };
 
     const formatTime = (time: number) => {
@@ -332,12 +354,33 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             </div>
             {youtubeVideoId ? (
                 <div className="video-frame" key="youtube-player">
-                    <div className="youtube-player-host" ref={youtubeContainerRef} />
-                    <p className="player-note" role={youtubePlayerError?.trackId === currentTrackId ? 'alert' : undefined}>
-                        {youtubePlayerError?.trackId === currentTrackId
-                            ? youtubePlayerError.message
-                            : 'Usa los controles oficiales de YouTube para reproducir o pausar.'}
-                    </p>
+                    <div className="video-visibility-row">
+                        <span>{isVideoVisible ? 'Video activo' : 'Modo ligero activado'}</span>
+                        <button
+                            className="video-visibility-button"
+                            type="button"
+                            onClick={toggleVideoVisibility}
+                            aria-pressed={isVideoVisible}
+                        >
+                            {isVideoVisible ? 'Ocultar video' : 'Mostrar video'}
+                        </button>
+                    </div>
+                    {isVideoVisible ? (
+                        <>
+                            <div className="youtube-player-host" ref={youtubeContainerRef} />
+                            <p className="player-note" role={youtubePlayerError?.trackId === currentTrackId ? 'alert' : undefined}>
+                                {youtubePlayerError?.trackId === currentTrackId
+                                    ? youtubePlayerError.message
+                                    : 'Usa los controles oficiales de YouTube para reproducir o pausar.'}
+                            </p>
+                        </>
+                    ) : (
+                        <div className="youtube-hidden-placeholder" role="status">
+                            <span className="placeholder-play" aria-hidden="true">Ⅱ</span>
+                            <strong>Video oculto</strong>
+                            <p>El reproductor de YouTube está detenido para reducir el uso de recursos.</p>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="audio-controls" key="audio-player">

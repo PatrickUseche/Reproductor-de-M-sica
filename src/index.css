@@ -196,6 +196,52 @@ input::placeholder {
   background: #17201e;
 }
 
+.video-visibility-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.video-visibility-button {
+  min-height: 32px;
+  border-color: var(--line);
+  padding: 5px 10px;
+  color: var(--teal-dark);
+  background: #fff;
+  font-size: 12px;
+}
+
+.youtube-hidden-placeholder {
+  display: grid;
+  min-height: 180px;
+  align-content: center;
+  justify-items: center;
+  gap: 9px;
+  border-radius: 5px;
+  padding: 22px;
+  color: var(--muted);
+  text-align: center;
+  background:
+    radial-gradient(ellipse at center, rgba(8, 126, 117, 0.12), transparent 65%),
+    #f2f6f4;
+}
+
+.youtube-hidden-placeholder strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.youtube-hidden-placeholder p {
+  max-width: 280px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .player-note {
   font-size: 13px;
 }

@@ -49,7 +49,7 @@ Vite carga las variables al iniciar. Si modificas `.env.local`, detén y vuelve 
 ## Uso
 
 - **Audio local:** usa el botón **Audio** junto al perfil o arrastra archivos sobre él. Se agregan al final sin iniciar la reproducción; el título se toma del nombre del archivo. Se muestra el avance de importación y los errores por archivo. El audio y sus metadatos se guardan en IndexedDB para restaurarlos al volver a abrir la aplicación en el mismo navegador y con la misma cuenta.
-- **Controles de audio:** las pistas de audio directo incluyen control de reproducción, posición y volumen. Los videos de YouTube mantienen los controles oficiales del reproductor incrustado.
+- **Controles de audio:** las pistas de audio directo incluyen control de reproducción, posición y volumen. Los videos de YouTube mantienen los controles oficiales del reproductor incrustado; puedes ocultar el video para detener y descargar el reproductor y reducir el uso de recursos. La preferencia se recuerda en el navegador.
 - **Repetición:** elige entre desactivada, repetir la playlist o repetir la canción actual. En el modo playlist, al terminar la última pista se vuelve a la primera.
 - **Aleatorio:** activa la reproducción aleatoria para recorrer las pistas sin cambiar el orden visible ni el orden guardado de la playlist.
 - **Búsqueda de YouTube:** escribe al menos tres caracteres y los resultados se actualizan automáticamente. Haz clic en la miniatura o el título para añadir el video y reproducirlo; **Añadir a la lista** lo incorpora sin cambiar la pista seleccionada.
