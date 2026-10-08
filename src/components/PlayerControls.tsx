@@ -202,7 +202,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
 
     useEffect(() => {
         const container = youtubeContainerRef.current;
-        if (!isVideoVisible || !youtubeVideoId || !container || !currentTrack) return;
+        if (!youtubeVideoId || !container || !currentTrack) return;
 
         let cancelled = false;
         let player: YouTubePlayer | null = null;
@@ -280,7 +280,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             if (youtubePlayerRef.current === player) youtubePlayerRef.current = null;
             container.replaceChildren();
         };
-    }, [currentTrack, currentTrackId, isVideoVisible, youtubeVideoId]);
+    }, [currentTrack, currentTrackId, youtubeVideoId]);
 
     const togglePlayPause = () => {
         if (!currentTrack) return;
@@ -314,7 +314,6 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         } catch (error) {
             console.error('No se pudo guardar la preferencia de visibilidad del video:', error);
         }
-        if (!nextVisibility) setIsPlaying(false);
     };
 
     const formatTime = (time: number) => {
@@ -365,9 +364,9 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                             {isVideoVisible ? 'Ocultar video' : 'Mostrar video'}
                         </button>
                     </div>
+                    <div className={`youtube-player-host${isVideoVisible ? '' : ' is-visually-hidden'}`} ref={youtubeContainerRef} />
                     {isVideoVisible ? (
                         <>
-                            <div className="youtube-player-host" ref={youtubeContainerRef} />
                             <p className="player-note" role={youtubePlayerError?.trackId === currentTrackId ? 'alert' : undefined}>
                                 {youtubePlayerError?.trackId === currentTrackId
                                     ? youtubePlayerError.message
@@ -377,8 +376,10 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
                     ) : (
                         <div className="youtube-hidden-placeholder" role="status">
                             <span className="placeholder-play" aria-hidden="true">Ⅱ</span>
-                            <strong>Video oculto</strong>
-                            <p>El reproductor de YouTube está detenido para reducir el uso de recursos.</p>
+                            <strong>{isPlaying ? 'Reproducción en curso' : 'Video oculto'}</strong>
+                            <p>{isPlaying
+                                ? 'El audio sigue reproduciéndose. El video está oculto.'
+                                : 'El video está oculto. La reproducción se controla desde los botones inferiores.'}</p>
                         </div>
                     )}
                 </div>

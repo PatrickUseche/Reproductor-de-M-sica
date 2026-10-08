@@ -196,6 +196,16 @@ input::placeholder {
   background: #17201e;
 }
 
+.youtube-player-host.is-visually-hidden {
+  position: fixed;
+  top: 0;
+  left: -600px;
+  width: 560px;
+  height: 315px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .video-visibility-row {
   display: flex;
   align-items: center;
