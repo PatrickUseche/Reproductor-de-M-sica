@@ -129,7 +129,7 @@ input::placeholder {
 
 .listening-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(250px, 0.78fr) minmax(280px, 0.86fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
   align-items: start;
   gap: 18px;
 }
@@ -438,65 +438,6 @@ input::placeholder {
   max-height: 540px;
   min-height: 350px;
   padding: 21px;
-}
-
-.playlist-suggestions {
-  display: flex;
-  max-height: 540px;
-  min-height: 350px;
-  flex-direction: column;
-  min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 18px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.playlist-suggestions .youtube-results {
-  flex: 1 1 auto;
-  max-height: none;
-}
-
-.suggestions-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.suggestions-heading .eyebrow {
-  margin-bottom: 5px;
-}
-
-.suggestions-heading h2 {
-  margin: 0;
-  color: var(--ink);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 21px;
-  font-weight: 500;
-}
-
-.suggestions-description {
-  margin: 5px 0 0;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.suggestions-heading > span {
-  max-width: 48%;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.suggestions-message {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
 }
 
 .youtube-search-form {
@@ -1312,21 +1253,6 @@ input::placeholder {
     grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
   }
 
-  .player-panel {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-  }
-
-  .listening-layout > .playlist-panel {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .playlist-suggestions {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
   .playlist-panel {
     max-height: 480px;
   }
@@ -1337,12 +1263,6 @@ input::placeholder {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .player-panel,
-  .listening-layout > .playlist-panel,
-  .playlist-suggestions {
-    grid-column: auto;
-    grid-row: auto;
-  }
 }
 
 @media (max-width: 480px) {

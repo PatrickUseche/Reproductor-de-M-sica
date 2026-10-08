@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { AccountAccess } from './components/AccountAccess';
 import { PlayerControls } from './components/PlayerControls';
 import { PlaylistView } from './components/PlaylistView';
-import { PlaylistSuggestions } from './components/PlaylistSuggestions';
 import { SongForm, type AudioFileFailure, type AudioFileImportResult } from './components/SongForm';
 import { YouTubeSearch } from './components/YouTubeSearch';
 import { SongPlaylist } from './core/SongPlaylist';
@@ -639,10 +638,6 @@ export default function App() {
               if (playlist.moveToPosition(fromPosition, toPosition)) refresh();
             }}
           />
-        <PlaylistSuggestions
-          songs={playlist.toArray().map((node) => node.content)}
-          onAddSong={handleAddYouTubeSong}
-        />
       </section>
 
       {localAudioError && <p className="form-error" role="alert">{localAudioError}</p>}

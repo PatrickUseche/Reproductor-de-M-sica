@@ -34,7 +34,7 @@ export function YouTubeSearch({ onAddSong, onPlaySong }: YouTubeSearchProps) {
       }).finally(() => {
         if (!controller.signal.aborted) setIsLoading(false);
       });
-    }, 400);
+    }, 1000);
 
     return () => {
       window.clearTimeout(timeout);
@@ -73,7 +73,9 @@ export function YouTubeSearch({ onAddSong, onPlaySong }: YouTubeSearchProps) {
       <p className="search-hint" id="youtube-search-hint" role="status">
         {query.trim().length < 3
           ? 'Escribe al menos 3 caracteres para buscar.'
-          : isLoading ? 'Buscando canciones…' : 'Los resultados se actualizan mientras escribes.'}
+          : isLoading
+            ? 'Buscando canciones…'
+            : 'La búsqueda se inicia cuando terminas de escribir; los resultados recientes se reutilizan.'}
       </p>
 
       {error && <p className="form-error" role="alert">{error}</p>}
